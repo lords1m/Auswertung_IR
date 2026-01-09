@@ -10,7 +10,7 @@ Die folgende Struktur wird für den reibungslosen Ablauf erwartet:
 
 ```text
 Auswertung_IR/
-├── data/                  # Rohdaten (.mat Dateien der Messungen)
+├── dataraw/                  # Rohdaten (.mat Dateien der Messungen)
 ├── processed/             # Verarbeitete Daten (Result-Structs, wird automatisch generiert durch Step 1)
 ├── functions/             # Hilfsfunktionen (z.B. Terz-Berechnung, IR-Truncation)
 ├── Plots/                 # (Automatisch erstellt) Speicherort für exportierte Bilder
@@ -33,7 +33,7 @@ Auswertung_IR/
 2.  **Daten vorbereiten:**
         Rohdaten sind abrufbar über: https://hsmittweidade.sharepoint.com/:u:/s/AC23wC-BModellmesstechnikWS2526/IQCT3bEf9VnFSre2CB-VnTCgAZyCwW9NYad185TLK9cJSak?e=ySUWOa
         
-    *   Lege die Rohmessungen (`.mat`) in den Ordner `data/`.
+    *   Lege die Rohmessungen (`.mat`) in den Ordner `dataraw/`.
     *   Stelle sicher, dass die Dateinamen dem Schema folgen (z. B. `Variante_1_Pos1.mat` oder `...Quelle...`), damit die Regex-Parser korrekt arbeiten.
 
 3.  **Verarbeitung (Preprocessing):**
@@ -45,7 +45,7 @@ Auswertung_IR/
 ### 1. `interactive_plotter.m` (Haupt-Tool)
 Eine umfangreiche GUI zum explorativen Analysieren der Daten.
 *   **Modi:** Einzelansicht oder Vergleich (Differenzbildung) zweier Messungen.
-*   **Datenquellen:** Kann sowohl Rohdaten (`data/`) als auch verarbeitete Daten (`processed/`) laden.
+*   **Datenquellen:** Kann sowohl Rohdaten (`dataraw/`) als auch verarbeitete Daten (`processed/`) laden.
 *   **Visualisierungen:**
     *   Frequenzspektrum (1/3-Oktave).
     *   Impulsantwort (Zeitbereich).
