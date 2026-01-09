@@ -1,4 +1,4 @@
-function [L_dBFS, L_sum, f_mitten] = calc_terz_spectrum(ir, fs, FS_global)
+function [L_dBFS, L_sum, f_mitten] = calc_terz_spectrum(ir, fs, FS_global, dist, T, LF)
     % Wenn keine Eingaben: Debug-Modus (zeigt Bandgrenzen)
     if nargin == 0
         fprintf('--- Terzband-Grenzen Check (IEC 61260, Basis 10) ---\n');
@@ -19,12 +19,25 @@ function [L_dBFS, L_sum, f_mitten] = calc_terz_spectrum(ir, fs, FS_global)
     end
 
     if nargin < 3, FS_global = 1.0; end
+    if nargin < 4, dist = 0; end
+    if nargin < 5, T = 20; end
+    if nargin < 6, LF = 50; end
 
     % 1. FFT
     N = length(ir);
     N_fft = 2^nextpow2(N); 
     X = fft(ir, N_fft);
     freqs = (0:N_fft-1) * (fs / N_fft);
+    
+    % --- Luftdämpfungskorrektur ---
+    if dist > 0
+        % Parameter: 101.325 kPa, T, LF
+        [~, A_lin, ~] = airabsorb(101.325, fs, N_fft, T, LF, dist);
+        
+        % Korrektur anwenden (Multiplikation, da A_lin > 1 die Dämpfung repräsentiert)
+        % Wir wollen den Verlust "rückgängig" machen.
+        X = X .* A_lin(:); % A_lin muss Spaltenvektor sein
+    end
     
     % Nur positive Frequenzen
     valid_idx = 1:floor(N_fft/2)+1;

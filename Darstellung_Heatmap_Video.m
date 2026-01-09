@@ -1,12 +1,5 @@
-%% ============================================================
-%  Darstellung_Heatmap_Video.m
-%
-%  Erstellt zeitabhängige Heatmap-Videos aus den Impulsantworten.
-%  Zeigt die Energieverteilung (Summenpegel) im 4x4-Raster über
-%  die Zeit (Abklingvorgang).
-%
-%  Output: .mp4 Dateien im Ordner 'Videos'
-% ============================================================
+%% Heatmap Video Generator
+% Erstellt Videos der Energieausbreitung im Raum.
 
 clear;
 clc;
@@ -15,21 +8,20 @@ close all;
 % Arbeitsverzeichnis
 scriptDir = fileparts(mfilename('fullpath'));
 if ~isempty(scriptDir), cd(scriptDir); end
-fprintf('Arbeitsverzeichnis: %s\n', pwd);
 
-%% ---------------- Einstellungen ----------------
+%% Einstellungen
 dataDir = 'data';
 outputVideoDir = 'Videos';
-fs = 500e3; % 500 kHz
+fs = 500e3;
 
-% Video-Parameter
-videoFPS = 20;          % Bilder pro Sekunde im Video
-timeStep_ms = 0.05;        % Zeitschritt zwischen Frames in der IR (5 ms für feinere Auflösung)
-windowSize_ms = 0.01;     % Integrationsfenster für RMS (Glättung)
-maxDuration_s = 0.1;    % Maximale Dauer der Analyse pro IR (um Rauschen am Ende zu ignorieren)
-cLim = [-50 0];         % Farbskala in dBFS (festgelegt für Vergleichbarkeit)
+% Video Settings
+videoFPS = 20;
+timeStep_ms = 0.05;
+windowSize_ms = 0.01;
+maxDuration_s = 0.1;
+cLim = [-50 0];
 
-% Layout (4x4)
+% Grid Layout
 positionsLayout = {
     'M1',  'M2',  'M3',  'M4';
     'M5',  'M6',  'M7',  'M8';
@@ -37,15 +29,14 @@ positionsLayout = {
     'Q1',  'M13', 'M14', 'M15';
 };
 
-%% ---------------- Setup ----------------
+%% Setup
 if ~exist(dataDir, 'dir'), error('Datenordner "%s" nicht gefunden!', dataDir); end
 if ~exist(outputVideoDir,'dir'), mkdir(outputVideoDir); end
 
 dirInfo = dir(fullfile(dataDir, '*.mat'));
 matFiles = {dirInfo.name};
-if isempty(matFiles), error('Keine .mat-Dateien gefunden!'); end
 
-% Varianten finden
+% Varianten identifizieren
 variantNames = {};
 for i = 1:numel(matFiles)
     tokens = regexp(matFiles{i}, '^(.*?)[_,]Pos', 'tokens', 'once', 'ignorecase');
@@ -53,9 +44,8 @@ for i = 1:numel(matFiles)
     if ~isempty(tokens), variantNames{end+1} = tokens{1}; end
 end
 variantNames = unique(variantNames);
-fprintf('Gefundene Varianten: %d\n', numel(variantNames));
 
-%% ---------------- Globale Referenz (Max Amplitude) ----------------
+%% Globale Referenz
 MaxAmp_global = 0;
 fprintf('Ermittle globale Referenz (Max Amplitude)...\n');
 for i = 1:numel(matFiles)
@@ -66,14 +56,13 @@ for i = 1:numel(matFiles)
     catch, end
 end
 if MaxAmp_global == 0, MaxAmp_global = 1; end
-fprintf('MaxAmp_global: %g\n', MaxAmp_global);
 
-%% ---------------- Video-Erstellung ----------------
+%% Video Erstellung
 for v = 1:numel(variantNames)
     variante = variantNames{v};
-    fprintf('\nVerarbeite Variante %d/%d: %s\n', v, numel(variantNames), variante);
+    fprintf('Verarbeite: %s\n', variante);
     
-    % 1. Alle IRs für diese Variante laden und vorbereiten
+    % Daten laden
     [rows, cols] = size(positionsLayout);
     irs = cell(rows, cols);
     
@@ -86,7 +75,6 @@ for v = 1:numel(variantNames)
                 try
                     S = load(filePath);
                     rawIR = extractIR(S);
-                    % Truncate richtet den Start (Direktschall) auf Index 1 aus
                     [ir_trunc, ~, ~, ~, ~, ~] = truncateIR(rawIR);
                     irs{r,c} = ir_trunc;
                 catch
@@ -98,24 +86,20 @@ for v = 1:numel(variantNames)
         end
     end
     
-    % 2. Zeitvektor definieren
-    % Wir nehmen an, dass alle IRs bei t=0 (Direktschall) beginnen dank truncateIR
+    % Zeitvektor
     dt = timeStep_ms / 1000;
     winLen = windowSize_ms / 1000;
-    winSamples = round(winLen * fs);
     
-    % Bestimme maximale Länge für das Video
     currentMaxLen = 0;
     for r=1:rows, for c=1:cols, currentMaxLen = max(currentMaxLen, length(irs{r,c})); end, end
     duration = min(maxDuration_s, currentMaxLen / fs);
     timePoints = 0:dt:duration;
     
     if isempty(timePoints)
-        warning('Keine gültigen Daten für %s. Überspringe.', variante);
         continue;
     end
     
-    % 3. Video initialisieren
+    % Video Init
     videoName = fullfile(outputVideoDir, ['Heatmap_' variante '.mp4']);
     vObj = VideoWriter(videoName, 'MPEG-4');
     vObj.FrameRate = videoFPS;
@@ -123,24 +107,21 @@ for v = 1:numel(variantNames)
     
     fig = figure('Visible', 'off', 'Position', [100, 100, 600, 500]);
     
-    % Plot einmalig initialisieren (Objekte erstellen)
     hImg = imagesc(NaN(rows, cols));
     colormap(jet);
     caxis(cLim);
     colorbar;
     axis square; axis off;
-    hTitle = title('', 'FontSize', 14, 'FontWeight', 'bold');
+    hTitle = title('', 'FontSize', 14);
     
-    % Text-Objekte vorerstellen (leere Platzhalter)
     hText = gobjects(rows, cols);
-    for r=1:rows, for c=1:cols, hText(r,c) = text(c, r, '', 'HorizontalAlignment', 'center', 'FontSize', 10); end, end
+    for r=1:rows, for c=1:cols, hText(r,c) = text(c, r, '', 'HorizontalAlignment', 'center'); end, end
     
+    % Frames rendern
     nFrames = length(timePoints);
-    fprintf('  Erstelle Frames (%d Schritte)...\n', nFrames);
     reverseStr = '';
     tStart = tic;
     
-    % 4. Frames generieren
     for t_idx = 1:nFrames
         t_start = timePoints(t_idx);
         t_end = t_start + winLen;
@@ -159,7 +140,6 @@ for v = 1:numel(variantNames)
                     curr_idx_end = min(length(ir), idx_end);
                     segment = ir(idx_start:curr_idx_end);
                     
-                    % RMS im Fenster berechnen
                     rms_val = sqrt(mean(segment.^2));
                     val = 20 * log10((rms_val + eps) / MaxAmp_global);
                 end
@@ -167,11 +147,9 @@ for v = 1:numel(variantNames)
             end
         end
         
-        % Vorhandene Objekte aktualisieren (statt neu erstellen) -> Viel schneller!
         set(hImg, 'CData', gridData);
         set(hTitle, 'String', sprintf('%s\nZeit: %.3f s', strrep(variante,'_',' '), t_start));
           
-        % Text Labels
         for r = 1:rows
             for c = 1:cols
                 val = gridData(r,c);
@@ -187,7 +165,7 @@ for v = 1:numel(variantNames)
         frame = getframe(fig);
         writeVideo(vObj, frame);
         
-        % Fortschrittsanzeige im Command Window
+        % Fortschritt
         if mod(t_idx, 5) == 0 || t_idx == nFrames
             percent = t_idx / nFrames * 100;
             
@@ -204,11 +182,10 @@ for v = 1:numel(variantNames)
     
     close(vObj);
     close(fig);
-    fprintf('  Video gespeichert: %s\n', videoName);
 end
 fprintf('\nFertig.\n');
 
-%% ---------------- HILFSFUNKTIONEN ----------------
+%% Helper
 function filePath = find_mat_file(dataDir, allFiles, variante, posName)
     filePath = '';
     if startsWith(posName, 'M')

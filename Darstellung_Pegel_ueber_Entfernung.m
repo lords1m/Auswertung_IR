@@ -1,6 +1,5 @@
 %% Schallpegel über Entfernung
-% Plot L vs. s mit idealer 1/r-Linie
-% Nutzt verarbeitete Daten aus 'processed' (step1_process_data.m)
+% Analysiert den Pegelabfall im Vergleich zur 1/r Kurve.
 
 clear;
 clc;
@@ -8,14 +7,12 @@ close all;
 
 scriptDir = fileparts(mfilename('fullpath'));
 if ~isempty(scriptDir), cd(scriptDir); end
-fprintf('Working dir: %s\n', pwd);
 
 %% Einstellungen
 
 varianten = {'Variante_1', 'Variante_2'};
 
-% Positionen und Entfernungen [m]
-% Quelle Q1 bei (0,0)
+% Positionen definieren (Quelle bei 0,0)
 positions_info = struct();
 
 % Reihe 1
@@ -49,40 +46,33 @@ for i = 1:length(positions_info)
     positions_info(i).distance = sqrt(dx^2 + dy^2);
 end
 
-% Analyse-Modus: 'summenpegel' oder 'terzband'
+% Analyse-Modus
 analyse_modus = 'summenpegel';
-target_frequency = 16000;  % Hz (für Terzband-Modus)
+target_frequency = 16000;
 
-% Darstellung: 'pegel' (dBFS) oder 'energie' (I/I_ref)
+% Darstellung
 darstellung_modus = 'energie';
 
-% Referenz für 1/r-Kurve
+% Referenz
 use_auto_reference = true;
 manual_reference_level = 0;
 manual_reference_distance = 0.5;
 
 procDir = 'processed';
 fs = 500e3;
-
-% 1/3-Oktav-Mittenfrequenzen (Standard-Terz nach IEC 61260), 4-63 kHz
 f_terz = double([4000 5000 6300 8000 10000 12500 16000 20000 25000 31500 40000 50000 63000]);
 
-%% Prüfe Ordner
+%% Daten laden
 
 if ~exist(procDir, 'dir')
     error('Ordner "%s" nicht gefunden', procDir);
 end
 
-fprintf('Nutze Daten aus: %s\n', procDir);
-
-%% Lade Pegel
-
-fprintf('\n=== Lade Pegel ===\n');
+fprintf('Lade Pegel...\n');
 results = struct();
 
 for v_idx = 1:numel(varianten)
     variante = varianten{v_idx};
-    fprintf('\n--- Variante: %s ---\n', variante);
 
     results(v_idx).variante = variante;
     results(v_idx).positions = [];
@@ -146,9 +136,8 @@ for v_idx = 1:numel(varianten)
     end
 end
 
-%% Ideale 1/r-Kurve
+%% Referenzkurve
 
-fprintf('\n=== Ideale 1/r-Kurve ===\n');
 all_distances = [];
 all_levels = [];
 for v_idx = 1:numel(results)
@@ -186,14 +175,11 @@ else
     fprintf('Manuelle Referenz: L_ref=%.2f dBFS @ r_ref=%.2f m\n', L_ref, r_ref);
 end
 
-% L(r) = L_ref - 20*log10(r/r_ref) (Halbraum, -6 dB/Verdopplung)
 L_ideal = L_ref - 20*log10(distance_ideal / r_ref);
 
-%% Energie-Darstellung
+%% Energie-Modus
 
 if strcmp(darstellung_modus, 'energie')
-    fprintf('\n=== Energie-Darstellung ===\n');
-
     E_ref = NaN;
     for v_idx = 1:numel(results)
         idx = find(abs(results(v_idx).distances - r_ref) < 0.01);
@@ -228,24 +214,21 @@ if strcmp(darstellung_modus, 'energie')
         end
     end
 
-    % E(r) = E_ref * (r_ref/r)^2 (Halbraum)
     L_ideal = (r_ref ./ distance_ideal).^2;
 
     all_levels = [];
     for v_idx = 1:numel(results)
         all_levels = [all_levels, results(v_idx).levels];
     end
-
-    fprintf('✓ Darstellung als E/E_ref\n');
 end
 
 %% Plots
 
-fprintf('\n=== Plots ===\n');
+fprintf('Erstelle Plots...\n');
 
 colors = lines(numel(varianten));
 
-%% Plot 1: Scatter
+%% Plot 1: Scatter (2D)
 
 fig1 = figure('Position', [100, 100, 1400, 800], 'Visible', 'on');
 
@@ -258,12 +241,10 @@ for v_idx = 1:numel(results)
         continue;
     end
 
-    % Sortiere nach Entfernung für saubere Anzeige
     [sorted_dist, sort_idx] = sort(results(v_idx).distances);
     sorted_levels = results(v_idx).levels(sort_idx);
     sorted_positions = results(v_idx).positions(sort_idx);
 
-    % Plot nur Messpunkte ohne Verbindungslinien
     h = plot(sorted_dist, sorted_levels, 'o', ...
         'Color', colors(v_idx, :), ...
         'MarkerSize', 8, ...
@@ -273,7 +254,6 @@ for v_idx = 1:numel(results)
     plot_handles(end+1) = h;
     legend_entries{end+1} = strrep(results(v_idx).variante, '_', ' ');
 
-    % Positionsnummern als Text anzeigen
     for i = 1:length(sorted_dist)
         text(sorted_dist(i), sorted_levels(i), sprintf('  %d', sorted_positions(i)), ...
             'FontSize', 8, 'Color', colors(v_idx, :), ...
@@ -281,12 +261,10 @@ for v_idx = 1:numel(results)
     end
 end
 
-% Ideale 1/r-Kurve (gestrichelt, schwarz)
 h_ideal = plot(distance_ideal, L_ideal, 'k--', 'LineWidth', 2, 'DisplayName', 'Ideal 1/r');
 plot_handles(end+1) = h_ideal;
 legend_entries{end+1} = sprintf('Ideal 1/r (Halbraum, -6 dB/Abstandsverdopplung)');
 
-% 1/3-Ebene als transparente graue Fläche
 y_third_level = max(all_levels) / 3;
 x_limits = [0, max_dist * 1.1];
 h_third = fill([x_limits(1), x_limits(2), x_limits(2), x_limits(1)], ...
@@ -299,10 +277,8 @@ legend_entries{end+1} = '1/3 Pegel-Ebene';
 hold off;
 grid on;
 
-% Achsenbeschriftung
 xlabel('Entfernung von der Quelle s [m]', 'FontSize', 14, 'FontWeight', 'bold');
 if strcmp(darstellung_modus, 'energie')
-    % Energie-Darstellung
     if strcmp(analyse_modus, 'summenpegel')
         ylabel('Relative Intensität I/I_{ref}', 'FontSize', 14, 'FontWeight', 'bold');
         title_str = 'Summen-Intensität über Entfernung';
@@ -311,7 +287,6 @@ if strcmp(darstellung_modus, 'energie')
         title_str = sprintf('Intensität (%.0f Hz) über Entfernung', target_frequency);
     end
 else
-    % Pegel-Darstellung
     if strcmp(analyse_modus, 'summenpegel')
         ylabel('Summenpegel L [dBFS]', 'FontSize', 14, 'FontWeight', 'bold');
         title_str = 'Summenpegel über Entfernung';
@@ -381,7 +356,6 @@ for v_idx = 1:numel(results)
     end
 end
 
-% Ideale 1/r-Kurve
 plot(distance_ideal, L_ideal, 'k--', 'LineWidth', 3, ...
     'DisplayName', 'Ideal 1/r (Halbraum)');
 
@@ -458,7 +432,6 @@ for v_idx = 1:numel(results)
         'filled', 'MarkerEdgeColor', 'k', 'LineWidth', 1.5, ...
         'DisplayName', strrep(results(v_idx).variante, '_', ' '));
 
-    % Positionsnummern anzeigen
     for i = 1:length(results(v_idx).distances)
         text(results(v_idx).distances(i), results(v_idx).levels(i), ...
             sprintf('  %d', results(v_idx).positions(i)), ...
@@ -466,13 +439,11 @@ for v_idx = 1:numel(results)
             'VerticalAlignment', 'bottom', 'FontWeight', 'bold');
     end
 
-    % Zeichne Pfade als Regressionskurven
     for line_idx = 1:length(line_connections_2d)
         path_positions = line_connections_2d{line_idx};
         dist_line = [];
         level_line = [];
 
-        % Sammle Punkte entlang des Pfades
         for pos_in_path = path_positions
             pos_result_idx = find(results(v_idx).positions == pos_in_path, 1);
             if ~isempty(pos_result_idx)
@@ -481,34 +452,27 @@ for v_idx = 1:numel(results)
             end
         end
 
-        % Zeichne Regressionskurve (nur wenn genug Punkte gefunden wurden)
         if length(dist_line) >= 3
-            % Sortiere nach Entfernung
             [dist_sorted, sort_idx] = sort(dist_line);
             level_sorted = level_line(sort_idx);
 
-            % Quadratische Regression 2. Ordnung
             p = polyfit(dist_sorted, level_sorted, min(2, length(dist_sorted)-1));
 
-            % Erstelle glatte Kurve
             dist_smooth = linspace(min(dist_sorted), max(dist_sorted), 100);
             level_smooth = polyval(p, dist_smooth);
 
-            % Zeichne Kurve in Variantenfarbe mit Transparenz und gestrichelt
             h_line = plot(dist_smooth, level_smooth, '--', 'Color', colors(v_idx, :), ...
                 'LineWidth', 2, 'HandleVisibility', 'off');
-            h_line.Color(4) = 0.5; % 50% Deckkraft
+            h_line.Color(4) = 0.5;
         elseif length(dist_line) == 2
-            % Bei nur 2 Punkten: einfache gestrichelte Linie
             [dist_sorted, sort_idx] = sort(dist_line);
             level_sorted = level_line(sort_idx);
             h_line = plot(dist_sorted, level_sorted, '--', 'Color', colors(v_idx, :), ...
                 'LineWidth', 2, 'HandleVisibility', 'off');
-            h_line.Color(4) = 0.5; % 50% Deckkraft
+            h_line.Color(4) = 0.5;
         end
     end
 
-    % Ideale 1/r-Kurve für Halbraum
     plot(distance_ideal, L_ideal, 'k--', 'LineWidth', 3, ...
         'DisplayName', 'Ideal 1/r (Halbraum)');
 
@@ -561,33 +525,29 @@ for v_idx = 1:numel(results)
     % end
 end
 
-%% --- PLOT 2c: Vergleich beider Varianten mit Differenz ---
+%% Plot 2c: Vergleich mit Differenz
 if numel(results) == 2
     fig2c = figure('Position', [250, 250, 1400, 900], 'Visible', 'on');
 
-    % Subplot 1: Beide Varianten übereinander mit Differenz-Linien
+    % Subplot 1: Pegel
     subplot(2, 1, 1);
     hold on;
 
-    % Finde gemeinsame Positionen für Differenz-Linien
     common_positions = intersect(results(1).positions, results(2).positions);
 
-    % Zeichne transparente Verbindungslinien zwischen den Varianten für jede Position
     for pos = common_positions
         idx1 = find(results(1).positions == pos, 1);
         idx2 = find(results(2).positions == pos, 1);
 
         if ~isempty(idx1) && ~isempty(idx2)
-            % Vertikale Linie zwischen den beiden Pegeln
             x_pos = results(1).distances(idx1);
             y1 = results(1).levels(idx1);
             y2 = results(2).levels(idx2);
 
-            % Farbe basierend auf Differenz
             if y1 > y2
-                line_color = [1 0.7 0.7]; % Rötlich
+                line_color = [1 0.7 0.7];
             else
-                line_color = [0.7 0.7 1]; % Bläulich
+                line_color = [0.7 0.7 1];
             end
 
             plot([x_pos, x_pos], [y1, y2], '-', 'Color', line_color, ...
@@ -603,12 +563,10 @@ if numel(results) == 2
             continue;
         end
 
-        % Scatter Plot
         scatter(results(v_idx).distances, results(v_idx).levels, 150, colors(v_idx, :), ...
             'filled', 'MarkerEdgeColor', 'k', 'LineWidth', 1.5, ...
             'DisplayName', strrep(results(v_idx).variante, '_', ' '));
 
-        % Positionsnummern
         for i = 1:length(results(v_idx).distances)
             text(results(v_idx).distances(i), results(v_idx).levels(i), ...
                 sprintf('  %d', results(v_idx).positions(i)), ...
@@ -617,7 +575,6 @@ if numel(results) == 2
         end
     end
 
-    % Ideale 1/r-Kurve
     plot(distance_ideal, L_ideal, 'k--', 'LineWidth', 2, ...
         'DisplayName', 'Ideal 1/r (Halbraum)');
 
@@ -635,11 +592,10 @@ if numel(results) == 2
     xlim([0, max_dist * 1.1]);
     ylim([min(all_levels) - 0.1*y_range, max(all_levels) + 0.1*y_range]);
 
-    % Subplot 2: Differenz zwischen den Varianten
+    % Subplot 2: Differenz
     subplot(2, 1, 2);
     hold on;
 
-    % Finde gemeinsame Positionen
     common_positions = intersect(results(1).positions, results(2).positions);
 
     if ~isempty(common_positions)
@@ -653,13 +609,11 @@ if numel(results) == 2
 
             if ~isempty(idx1) && ~isempty(idx2)
                 diff_distances(end+1) = results(1).distances(idx1);
-                % Differenz: Variante 1 - Variante 2
                 diff_levels(end+1) = results(1).levels(idx1) - results(2).levels(idx2);
                 diff_positions(end+1) = pos;
             end
         end
 
-        % Plot Differenz
         scatter(diff_distances, diff_levels, 150, 'filled', ...
             'MarkerEdgeColor', 'k', 'LineWidth', 1.5, ...
             'MarkerFaceColor', [0.8 0.3 0.3], ...
@@ -667,7 +621,6 @@ if numel(results) == 2
                 strrep(results(1).variante, '_', ' '), ...
                 strrep(results(2).variante, '_', ' ')));
 
-        % Positionsnummern
         for i = 1:length(diff_distances)
             text(diff_distances(i), diff_levels(i), ...
                 sprintf('  %d', diff_positions(i)), ...
@@ -675,11 +628,9 @@ if numel(results) == 2
                 'VerticalAlignment', 'bottom', 'FontWeight', 'bold');
         end
 
-        % Nulllinie
         plot([0, max_dist * 1.1], [0, 0], 'k-', 'LineWidth', 1.5, ...
             'DisplayName', 'Keine Differenz');
 
-        % Farbige Bereiche für positive/negative Differenzen
         y_max_diff = max(abs(diff_levels)) * 1.2;
         fill([0, max_dist * 1.1, max_dist * 1.1, 0], ...
              [0, 0, y_max_diff, y_max_diff], ...
@@ -690,12 +641,10 @@ if numel(results) == 2
              [0.9 0.9 1], 'FaceAlpha', 0.3, 'EdgeColor', 'none', ...
              'DisplayName', sprintf('%s höher', strrep(results(2).variante, '_', ' ')));
 
-        % Statistik zur Differenz
         mean_diff = mean(diff_levels);
         std_diff = std(diff_levels);
         max_diff = max(abs(diff_levels));
 
-        % Text mit Statistik
         if strcmp(darstellung_modus, 'energie')
             text_str = sprintf('Mittlere Differenz: %.2e\nStandardabweichung: %.2e\nMax. Differenz: %.2e', ...
                 mean_diff, std_diff, max_diff);
@@ -751,42 +700,32 @@ else
     fprintf('ℹ Vergleichsplot übersprungen (benötigt genau 2 Varianten, %d vorhanden)\n', numel(results));
 end
 
-%% --- Erstelle 1/r-Ebene Mesh-Daten für 3D Plots ---
-% Diese werden für PLOT 2d und PLOT 3 benötigt
+%% 3D Mesh Daten
 
 x_mesh = linspace(-0.1, max([positions_info.x])*1.1, 30);
 y_mesh = linspace(-0.1, max([positions_info.y])*1.1, 30);
 [X_mesh, Y_mesh] = meshgrid(x_mesh, y_mesh);
 R_mesh = sqrt((X_mesh - source_x).^2 + (Y_mesh - source_y).^2);
 
-% Berechne Werte für die 1/r-Ebene (Halbraum-Ausbreitung)
-% An der Quelle (r=0) würde der Wert theoretisch unendlich sein
-% Verwende einen physikalisch sinnvollen Mindestabstand basierend auf der kleinsten Messung
 min_physical_dist = min(0.05, r_ref * 0.1); % 5cm oder 10% der Referenzentfernung
 R_mesh_safe = R_mesh;
 R_mesh_safe(R_mesh_safe < min_physical_dist) = min_physical_dist;
 
 if strcmp(darstellung_modus, 'energie')
-    % Energie-Modus: E(r) = E_ref * (r_ref/r)^2
     L_mesh = (r_ref ./ R_mesh_safe).^2;
     L_source = (r_ref / min_physical_dist)^2;
-    fprintf('1/r²-Ebene (Halbraum, Energie): Mindestabstand = %.3f m, E_source/E_ref = %.2f\n', min_physical_dist, L_source);
 else
-    % Pegel-Modus: L(r) = L_ref - 20*log10(r/r_ref)
     L_mesh = L_ref - 20*log10(R_mesh_safe / r_ref);
     L_source = L_ref - 20*log10(min_physical_dist / r_ref);
-    fprintf('1/r-Ebene (Halbraum, Pegel): Mindestabstand = %.3f m, L_source = %.1f dBFS\n', min_physical_dist, L_source);
 end
 
-%% --- PLOT 2d: 3D Vergleichsplot beider Varianten ---
+%% Plot 2d: 3D Vergleich
 if numel(results) == 2
     fig2d = figure('Position', [300, 300, 1400, 900], 'Visible', 'on');
     hold on;
 
-    % Finde gemeinsame Positionen
     common_positions = intersect(results(1).positions, results(2).positions);
 
-    % Sammle x,y-Koordinaten für beide Varianten
     for v_idx = 1:2
         if isempty(results(v_idx).distances)
             continue;
@@ -803,12 +742,10 @@ if numel(results) == 2
             end
         end
 
-        % 3D Scatter Plot für diese Variante
         scatter3(x_coords, y_coords, results(v_idx).levels, 150, colors(v_idx, :), ...
             'filled', 'MarkerEdgeColor', 'k', 'LineWidth', 1.5, ...
             'DisplayName', strrep(results(v_idx).variante, '_', ' '));
 
-        % Positionsnummern in 3D anzeigen
         for i = 1:length(x_coords)
             text(x_coords(i), y_coords(i), results(v_idx).levels(i), ...
                 sprintf('  P%d', results(v_idx).positions(i)), ...
@@ -817,13 +754,11 @@ if numel(results) == 2
         end
     end
 
-    % Zeichne transparente Verbindungslinien zwischen den Varianten
     for pos = common_positions
         idx1 = find(results(1).positions == pos, 1);
         idx2 = find(results(2).positions == pos, 1);
 
         if ~isempty(idx1) && ~isempty(idx2)
-            % Finde x,y Koordinaten
             pos_info_idx = find([positions_info.pos] == pos);
             if ~isempty(pos_info_idx)
                 x_pos = positions_info(pos_info_idx).x;
@@ -831,11 +766,10 @@ if numel(results) == 2
                 z1 = results(1).levels(idx1);
                 z2 = results(2).levels(idx2);
 
-                % Vertikale Linie zwischen den beiden Pegeln
                 if z1 > z2
-                    line_color = [1 0.5 0.5]; % Rot: Variante 1 höher
+                    line_color = [1 0.5 0.5];
                 else
-                    line_color = [0.5 0.5 1]; % Blau: Variante 2 höher
+                    line_color = [0.5 0.5 1];
                 end
 
                 h = plot3([x_pos, x_pos], [y_pos, y_pos], [z1, z2], '-', ...
@@ -845,14 +779,12 @@ if numel(results) == 2
         end
     end
 
-    % Quellenposition als Kugel/Kreis markieren (auf der 1/r-Ebene)
     scatter3(source_x, source_y, L_source, 300, 'r', 'o', ...
         'filled', 'MarkerEdgeColor', 'k', 'LineWidth', 2.5, ...
         'DisplayName', 'Quelle Q1');
     text(source_x, source_y, L_source, '  Q1', ...
         'FontSize', 11, 'Color', 'r', 'FontWeight', 'bold');
 
-    % Zeichne die 1/r-Ebene als transparentes Mesh (Halbraum)
     surf(X_mesh, Y_mesh, L_mesh, 'FaceAlpha', 0.2, 'EdgeColor', 'k', ...
         'EdgeAlpha', 0.05, 'FaceColor', [0.7 0.7 0.7], ...
         'DisplayName', 'Ideal 1/r-Ebene (Halbraum)');
@@ -909,10 +841,8 @@ else
     fprintf('ℹ 3D Vergleichsplot übersprungen (benötigt genau 2 Varianten, %d vorhanden)\n', numel(results));
 end
 
-%% --- PLOT 3: Scatter3 Plot für jede Variante separat (3D mit x, y, Pegel) ---
+%% Plot 3: 3D Einzelansicht
 
-% Verbindungslinien von Quelle zu Messpunkten als Regressionskurven
-% Q-P13-14-15, Q-11-8, Q-P10-P7-P4, Q-P6-P3, Q-P9-P5-P1
 line_connections = {
     [13, 14, 15]; ...
     [11, 8]; ...
@@ -921,7 +851,6 @@ line_connections = {
     [9, 5, 1]
 };
 
-% Erstelle separate 3D-Plots für jede Variante
 for v_idx = 1:numel(results)
     if isempty(results(v_idx).distances)
         continue;
@@ -930,7 +859,6 @@ for v_idx = 1:numel(results)
     fig3 = figure('Position', [200 + v_idx*50, 200 + v_idx*50, 1400, 900], 'Visible', 'on');
     hold on;
 
-    % Hole x,y-Koordinaten für die Messpositionen dieser Variante
     x_coords = [];
     y_coords = [];
     for p_idx = 1:length(results(v_idx).positions)
@@ -942,12 +870,10 @@ for v_idx = 1:numel(results)
         end
     end
 
-    % 3D Scatter Plot für diese Variante
     scatter3(x_coords, y_coords, results(v_idx).levels, 150, colors(v_idx, :), ...
         'filled', 'MarkerEdgeColor', 'k', 'LineWidth', 1.5, ...
         'DisplayName', strrep(results(v_idx).variante, '_', ' '));
 
-    % Positionsnummern in 3D anzeigen
     for i = 1:length(x_coords)
         text(x_coords(i), y_coords(i), results(v_idx).levels(i), ...
             sprintf('  P%d', results(v_idx).positions(i)), ...
@@ -955,14 +881,12 @@ for v_idx = 1:numel(results)
             'FontWeight', 'bold');
     end
 
-    % Quellenposition als Kugel/Kreis markieren (auf der 1/r-Ebene)
     scatter3(source_x, source_y, L_source, 300, 'r', 'o', ...
         'filled', 'MarkerEdgeColor', 'k', 'LineWidth', 2.5, ...
         'DisplayName', 'Quelle Q1');
     text(source_x, source_y, L_source, '  Q1', ...
         'FontSize', 11, 'Color', 'r', 'FontWeight', 'bold');
 
-    % Zeichne Regressionskurven für diese Variante
     for line_idx = 1:length(line_connections)
         path_positions = line_connections{line_idx};
         x_line = source_x;
@@ -981,7 +905,6 @@ for v_idx = 1:numel(results)
             end
         end
 
-        % Zeichne Regressionskurve (nur wenn genug Punkte gefunden wurden)
         if length(x_line) >= 3
             dist_along_path = zeros(size(x_line));
             for i = 2:length(x_line)
@@ -1000,15 +923,14 @@ for v_idx = 1:numel(results)
 
             h_line = plot3(x_smooth, y_smooth, z_smooth, '--', 'Color', colors(v_idx, :), ...
                 'LineWidth', 2, 'HandleVisibility', 'off');
-            h_line.Color(4) = 0.5; % 50% Deckkraft
+            h_line.Color(4) = 0.5;
         elseif length(x_line) == 2
             h_line = plot3(x_line, y_line, z_line, '--', 'Color', colors(v_idx, :), ...
                 'LineWidth', 2, 'HandleVisibility', 'off');
-            h_line.Color(4) = 0.5; % 50% Deckkraft
+            h_line.Color(4) = 0.5;
         end
     end
 
-    % Zeichne die 1/r-Ebene als transparentes Mesh (Halbraum)
     surf(X_mesh, Y_mesh, L_mesh, 'FaceAlpha', 0.3, 'EdgeColor', 'k', ...
         'EdgeAlpha', 0.1, 'FaceColor', [0.7 0.7 0.7], ...
         'DisplayName', 'Ideal 1/r-Ebene (Halbraum)');
@@ -1062,11 +984,8 @@ for v_idx = 1:numel(results)
     % end
 end
 
-%% ---------------- Statistische Auswertung ----------------
-fprintf('\n=== Statistische Auswertung ===\n');
-fprintf('=================================================================\n');
+%% Statistik
 
-% Sammle alle Abweichungen für Gesamtstatistik
 all_deviations = [];
 all_std_values = [];
 
@@ -1077,11 +996,10 @@ for v_idx = 1:numel(results)
 
     fprintf('\n--- %s ---\n', strrep(results(v_idx).variante, '_', ' '));
 
-    % Berechne Abweichung von idealer 1/r-Kurve
+    % Abweichung
     L_ideal_at_meas = L_ref - 20*log10(results(v_idx).distances / r_ref);
     deviation = results(v_idx).levels - L_ideal_at_meas;
 
-    % Speichere für Gesamtstatistik
     all_deviations = [all_deviations, deviation];
     std_dev = std(deviation);
     all_std_values(end+1) = std_dev;
@@ -1099,8 +1017,7 @@ for v_idx = 1:numel(results)
     fprintf('  • Spannweite (Range):          %.2f dB\n', max(deviation) - min(deviation));
     fprintf('  \n');
 
-    % Berechne effektiven Dämpfungsexponenten durch Regression
-    % L = a - b*log10(r)  => b sollte 20 für ideale 1/r sein
+    % Dämpfungsexponent
     if length(results(v_idx).distances) > 2
         log_dist = log10(results(v_idx).distances);
         p = polyfit(log_dist, results(v_idx).levels, 1);
@@ -1115,7 +1032,6 @@ for v_idx = 1:numel(results)
         fprintf('  • Gemessen (pro Verdopplung):  %.2f dB\n', effective_exponent * log10(2));
         fprintf('  • Ideal (pro Verdopplung):     6.02 dB\n');
 
-        % Bestimmtheitsmaß R² der Regression
         y_fit = polyval(p, log_dist);
         SS_res = sum((results(v_idx).levels - y_fit).^2);
         SS_tot = sum((results(v_idx).levels - mean(results(v_idx).levels)).^2);
@@ -1125,32 +1041,16 @@ for v_idx = 1:numel(results)
 
     fprintf('  \n');
 
-    % Speichere Abweichungen in results für spätere Verwendung
     results(v_idx).deviations = deviation;
     results(v_idx).std_deviation = std_dev;
 end
 
-% Gesamtstatistik über alle Varianten
+% Gesamtstatistik
 if numel(results) > 1 && ~isempty(all_deviations)
-    fprintf('\n=================================================================\n');
-    fprintf('--- GESAMTSTATISTIK ÜBER ALLE VARIANTEN ---\n');
     fprintf('  Gesamtanzahl Messpunkte: %d\n', length(all_deviations));
     fprintf('  \n');
     fprintf('  • Mittlere STD über Varianten: %.2f dB\n', mean(all_std_values));
     fprintf('  • Globale STD (alle Punkte):   %.2f dB\n', std(all_deviations));
     fprintf('  • Globaler Mittelwert:        %+.2f dB\n', mean(all_deviations));
     fprintf('  • Globale RMS-Abweichung:      %.2f dB\n', sqrt(mean(all_deviations.^2)));
-    fprintf('=================================================================\n');
 end
-
-fprintf('\n✓ Statistische Analyse abgeschlossen.\n');
-fprintf('\nINTERPRETATION:\n');
-fprintf('• STD nahe 0 dB  → Sehr gute Übereinstimmung mit Halbraum-Ausbreitung\n');
-fprintf('• STD < 2 dB     → Gute Übereinstimmung, geringe Reflexionen\n');
-fprintf('• STD > 3 dB     → Deutliche Abweichungen, Raumeinflüsse sichtbar\n');
-fprintf('• Positive Mittelwerte → Weniger Dämpfung als erwartet (Reflexionen)\n');
-fprintf('• Negative Mittelwerte → Mehr Dämpfung als erwartet (Absorption)\n');
-
-
-%% Hilfsfunktionen nicht mehr benötigt
-% Alle Daten werden direkt aus processed-Files geladen

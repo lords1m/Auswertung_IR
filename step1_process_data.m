@@ -1,91 +1,166 @@
-%% step1_process_data.m
-%  Zentrales Skript: Liest Raw-Data -> Berechnet -> Speichert Processed-Data
-%  UPDATE: Optimiert für Formate wie 'Variante_2_Pos_15.mat'
+%% Datenverarbeitung (Step 1)
+% Liest Rohdaten, berechnet Metriken und speichert Ergebnisse.
+
 clear; clc; close all;
 
-% Pfade setzen und Helper laden
 scriptDir = fileparts(mfilename('fullpath'));
 if ~isempty(scriptDir), cd(scriptDir); end
 addpath('functions'); 
 
-% --- Config ---
+% Config
 dataDir = 'dataraw';
 procDir = 'processed';
 fs = 500e3; % Abtastrate
 
-if ~exist(dataDir, 'dir'), error('Ordner "data" fehlt!'); end
-if ~exist(procDir, 'dir'), mkdir(procDir); end
+fprintf('=== Step 1: Datenverarbeitung gestartet ===\n');
+fprintf('Konfiguration:\n');
+fprintf('  - Rohdaten-Ordner: %s\n', dataDir);
+fprintf('  - Ausgabe-Ordner: %s\n', procDir);
+fprintf('  - Abtastrate: %.0f Hz\n', fs);
 
-% Ordner für separate Funktions-Ausgaben erstellen
+if ~exist(dataDir, 'dir'), error('Ordner "data" fehlt!'); end
+if ~exist(procDir, 'dir')
+    fprintf('Erstelle Ausgabe-Ordner: %s\n', procDir);
+    mkdir(procDir);
+end
+
 dirTime = fullfile(procDir, 'Time_Domain');
 dirFreq = fullfile(procDir, 'Frequency_Domain');
-if ~exist(dirTime, 'dir'), mkdir(dirTime); end
-if ~exist(dirFreq, 'dir'), mkdir(dirFreq); end
+if ~exist(dirTime, 'dir')
+    fprintf('Erstelle Unterordner: %s\n', dirTime);
+    mkdir(dirTime);
+end
+if ~exist(dirFreq, 'dir')
+    fprintf('Erstelle Unterordner: %s\n', dirFreq);
+    mkdir(dirFreq);
+end
 
-% 1. Globale Referenz finden
+% 1. Globale Referenz ermitteln
 files = dir(fullfile(dataDir, '*.mat'));
-fprintf('Schritt 1: Scanne %d Dateien für globale Referenz...\n', length(files));
+fprintf('\n--- Phase 1: Ermittle globalen Referenzpegel ---\n');
+fprintf('Anzahl gefundene Dateien: %d\n', length(files));
 
 FS_global = 0;
 for i = 1:length(files)
     try
         filepath = fullfile(files(i).folder, files(i).name);
-        % Kurzer Load für Max-Check
         S = load(filepath);
         ir = extract_ir(S);
         if ~isempty(ir)
              FS_global = max(FS_global, max(abs(ir)));
         end
-    catch
+    catch ME
+        fprintf('  [!] Fehler beim Laden von %s: %s\n', files(i).name, ME.message);
     end
 end
 if FS_global == 0, FS_global = 1; end
-fprintf('Globale Referenz (Max Amp): %.5f\n', FS_global);
+fprintf('Globaler Referenzpegel (FS_global): %.5f\n', FS_global);
 
-% 2. Verarbeitungsschleife
-fprintf('Schritt 2: Verarbeitung und Speicherung...\n');
-summary_data = {}; 
+% Geometrie laden für Distanzberechnung
+fprintf('\n--- Phase 2: Lade Geometriedaten ---\n');
+geo = get_geometry();
+fprintf('Geometriedaten geladen: %d Positionen definiert\n', length(geo));
+
+% 2. Verarbeitung
+fprintf('\n--- Phase 3: Verarbeite einzelne Dateien ---\n');
+summary_data = {};
+processed_count = 0;
+skipped_count = 0; 
 
 for i = 1:length(files)
     filepath = fullfile(files(i).folder, files(i).name);
-    
-    % A) Parsen (liefert z.B. Variante='Variante_2', Position='15')
+
+    fprintf('\n[%d/%d] Verarbeite: %s\n', i, length(files), files(i).name);
+
+    % Parse
     [S, meta] = load_and_parse_file(filepath);
-    
-    % Überspringen bei Fehlern
+
     if isempty(S) || isempty(meta.variante)
-        fprintf('  [SKIP] %s\n', files(i).name);
+        fprintf('  [SKIP] Datei konnte nicht geparst werden oder keine Variante erkannt\n');
+        skipped_count = skipped_count + 1;
         continue;
     end
+
+    fprintf('  - Variante: %s\n', meta.variante);
+    fprintf('  - Typ: %s\n', meta.type);
+    fprintf('  - Position: %s\n', meta.position);
     
-    % B) IR extrahieren
+    % Umgebungsparameter auslesen (Defaults: 20°C, 50%)
+    T_val = 20;
+    LF_val = 50;
+    if isfield(S, 'T') && ~isempty(S.T), T_val = mean(S.T); end
+    if isfield(S, 'Lf') && ~isempty(S.Lf)
+        LF_val = mean(S.Lf);
+    elseif isfield(S, 'LF') && ~isempty(S.LF)
+        LF_val = mean(S.LF);
+    end
+    fprintf('  - Temperatur: %.1f°C, Luftfeuchte: %.1f%%\n', T_val, LF_val);
+
+    % IR Extract
     ir_raw = extract_ir(S);
-    if isempty(ir_raw), continue; end
-    
-    % C) Truncation
+    if isempty(ir_raw)
+        fprintf('  [SKIP] Keine Impulsantwort extrahierbar\n');
+        skipped_count = skipped_count + 1;
+        continue;
+    end
+    fprintf('  - Rohdaten extrahiert: %d Samples\n', length(ir_raw));
+
+    % Truncate
     [ir_trunc, metrics] = truncate_ir(ir_raw);
+    fprintf('  - Trunkierte IR: %d Samples (Start: %d, Ende: %d)\n', ...
+        length(ir_trunc), metrics.idx_start, metrics.idx_end);
+    fprintf('  - SNR: %.2f dB\n', metrics.snr_db);
     
-    % Namen generieren für separate Files
+    % Naming
     if strcmp(meta.type, 'Source')
         nameTag = sprintf('%s_Quelle', meta.variante);
     else
         nameTag = sprintf('%s_Pos%s', meta.variante, meta.position);
     end
     
-    % Speichern: Truncated IR & Metrics (Time Domain)
+    % Save Time
     save(fullfile(dirTime, ['Time_' nameTag '.mat']), 'ir_trunc', 'metrics', 'meta');
     
-    % D) Spektrum & Summenpegel
-    [L_terz, L_sum, f_center] = calc_terz_spectrum(ir_trunc, fs, FS_global);
+    % Distanz ermitteln
+    dist = 0;
+    if strcmp(meta.type, 'Receiver')
+        posNum = str2double(meta.position);
+        if ~isnan(posNum)
+            idx = find([geo.pos] == posNum);
+            if ~isempty(idx)
+                dist = geo(idx).distance;
+                fprintf('  - Distanz zur Quelle: %.2f m\n', dist);
+            else
+                fprintf('  - Distanz zur Quelle: Unbekannt (Position nicht in Geometrie)\n');
+            end
+        end
+    else
+        fprintf('  - Distanz zur Quelle: 0 m (Quellmessung)\n');
+    end
+    % Hinweis: Bei 'Source' (Q1) ist dist=0, also keine Korrektur (korrekt).
+
+    % Calc Spectrum
+    fprintf('  - Berechne Terzspektrum...\n');
+    [L_terz, L_sum, f_center] = calc_terz_spectrum(ir_trunc, fs, FS_global, dist, T_val, LF_val);
+    fprintf('    Summenpegel: %.2f dB FS\n', L_sum);
+
+    % Calc RT60 (T30) mit Umgebungsparametern
+    fprintf('  - Berechne Nachhallzeit (T30)...\n');
+    [t30_vals, t30_freqs] = calc_rt60_spectrum(ir_trunc, fs, T_val, LF_val);
+    if ~isempty(t30_vals)
+        fprintf('    T30 Werte berechnet für %d Frequenzbänder\n', length(t30_vals));
+    end
     
-    % Speichern: Spektrum (Frequency Domain)
-    save(fullfile(dirFreq, ['Spec_' nameTag '.mat']), 'L_terz', 'L_sum', 'f_center', 'meta');
+    % Save Freq
+    save(fullfile(dirFreq, ['Spec_' nameTag '.mat']), 'L_terz', 'L_sum', 'f_center', 't30_vals', 'meta');
     
-    % E) Ergebnis-Struktur
+    % Result Struct
     Result = struct();
     Result.meta = meta;
     Result.meta.fs = fs;
     Result.meta.FS_global_used = FS_global;
+    Result.meta.T = T_val;
+    Result.meta.LF = LF_val;
     
     Result.time.ir = ir_trunc;
     Result.time.metrics = metrics;
@@ -93,106 +168,120 @@ for i = 1:length(files)
     Result.freq.f_center = f_center;
     Result.freq.terz_dbfs = L_terz;
     Result.freq.sum_level = L_sum;
+    Result.freq.t30 = t30_vals;
+    Result.freq.t30_freqs = t30_freqs;
     
-    % F) Speichern
-    % Erzeugt standardisierte Namen: 'Proc_Variante_2_Pos15.mat'
+    % Save Processed
     if strcmp(meta.type, 'Source')
         saveName = sprintf('Proc_%s_Quelle.mat', meta.variante);
     else
-        % Hier wird Pos%s genutzt, um auch 'Z1' zu unterstützen
         saveName = sprintf('Proc_%s_Pos%s.mat', meta.variante, meta.position);
     end
-    
+
     save(fullfile(procDir, saveName), 'Result');
-    
-    % Eintrag für Tabelle
+    fprintf('  - Gespeichert: %s\n', saveName);
+
     summary_data(end+1,:) = {meta.variante, meta.position, L_sum, metrics.snr_db, saveName};
-    
-    if mod(i, 5) == 0, fprintf('.'); end
+    processed_count = processed_count + 1;
+    fprintf('  [OK] Datei erfolgreich verarbeitet\n');
 end
 
-% 3. Zusammenfassung speichern
+fprintf('\n--- Phase 3 abgeschlossen ---\n');
+fprintf('Verarbeitet: %d Dateien\n', processed_count);
+fprintf('Übersprungen: %d Dateien\n', skipped_count);
+
+% 3. Summary & Average
 if ~isempty(summary_data)
+    fprintf('\n--- Phase 4: Erstelle Zusammenfassung ---\n');
     summary_table = cell2table(summary_data, ...
         'VariableNames', {'Variante', 'Position', 'SumLevel', 'SNR', 'File'});
-    
+
     summary_table = sortrows(summary_table, {'Variante', 'Position'});
-    
+
     save(fullfile(procDir, 'Summary_Database.mat'), 'summary_table');
     writetable(summary_table, fullfile(procDir, 'Summary.xlsx'));
-    
-    % --- NEU: Durchschnittsspektren (Average) ---
-    fprintf('\nSchritt 3: Erstelle energetisch gemittelte Spektren (Average)...\n');
+    fprintf('Zusammenfassungstabelle gespeichert:\n');
+    fprintf('  - Summary_Database.mat\n');
+    fprintf('  - Summary.xlsx\n');
+
+    % Average berechnen
+    fprintf('\n--- Phase 5: Berechne Durchschnittswerte ---\n');
     unique_vars = unique(summary_table.Variante);
+    fprintf('Gefundene Varianten: %d\n', length(unique_vars));
     
     for i = 1:length(unique_vars)
         v = unique_vars{i};
-        % Nur Positionen (keine Quelle)
+        fprintf('\nBerechne Durchschnitt für Variante: %s\n', v);
         mask = strcmp(summary_table.Variante, v) & ~strcmp(summary_table.Position, 'Quelle');
         subset = summary_table(mask, :);
-        
-        if isempty(subset), continue; end
-        
-        % Template laden (für Metadaten)
+
+        if isempty(subset)
+            fprintf('  [SKIP] Keine Receiver-Positionen gefunden\n');
+            continue;
+        end
+
+        fprintf('  - Anzahl Positionen: %d\n', height(subset));
+
+        % Template
         first_file = fullfile(procDir, subset.File{1});
         tmp = load(first_file);
         R_tmpl = tmp.Result;
-        
-        % Akkumulatoren
+
+        % Summation
         sum_E_terz = 0;
         sum_E_total = 0;
         n = height(subset);
-        
+
         for k = 1:n
             D = load(fullfile(procDir, subset.File{k}));
-            % Terzpegel -> Lineare Energie (relativ zu FS)
             E_terz = 10.^(D.Result.freq.terz_dbfs / 10);
             E_terz(~isfinite(E_terz)) = 0;
             sum_E_terz = sum_E_terz + E_terz;
-            
-            % Summenpegel -> Lineare Energie
+
             E_tot = 10^(D.Result.freq.sum_level / 10);
             if ~isfinite(E_tot), E_tot = 0; end
             sum_E_total = sum_E_total + E_tot;
         end
+        fprintf('  - Energiewerte summiert\n');
         
-        % Mittelung
-        avg_E_terz = sum_E_terz / n;
-        avg_E_total = sum_E_total / n;
-        
-        % Result bauen
+        % Result
         Result = R_tmpl;
         Result.meta.position = 'Average';
         Result.meta.type = 'Average';
-        Result.time.ir = zeros(100,1); % Dummy IR, da spektral gemittelt
-        Result.time.metrics.energy = avg_E_total * (Result.meta.FS_global_used^2); % Abs. Energie
+        Result.time.ir = zeros(100,1); 
+        Result.time.metrics.energy = (sum_E_total/n) * (Result.meta.FS_global_used^2);
         Result.time.metrics.snr_db = NaN;
         Result.time.metrics.idx_start = 1;
         Result.time.metrics.idx_end = 1;
         Result.time.metrics.energy_total = NaN;
         Result.time.metrics.energy_share = NaN;
         
-        Result.freq.terz_dbfs = 10 * log10(avg_E_terz + eps);
-        Result.freq.sum_level = 10 * log10(avg_E_total + eps);
-        
+        Result.freq.terz_dbfs = 10 * log10((sum_E_terz/n) + eps);
+        Result.freq.sum_level = 10 * log10((sum_E_total/n) + eps);
+        Result.freq.t30 = []; % Average T30 ist komplexer, hier leer lassen oder separat mitteln
+        Result.freq.t30_freqs = [];
+
+        fprintf('  - Durchschnittlicher Summenpegel: %.2f dB FS\n', Result.freq.sum_level);
+
         saveName = sprintf('Proc_%s_Average.mat', v);
         save(fullfile(procDir, saveName), 'Result');
-        fprintf('  -> %s erstellt.\n', saveName);
+        fprintf('  - Gespeichert: %s\n', saveName);
     end
-    
-    fprintf('\nFertig! %d Dateien verarbeitet.\nDaten in "%s".\n', height(summary_table), procDir);
+
+    fprintf('\n--- Phase 5 abgeschlossen ---\n');
 else
-    warning('Keine Daten verarbeitet.');
+    fprintf('\n[!] Keine Daten zum Zusammenfassen vorhanden\n');
 end
 
-% --- Lokale Helper Funktionen ---
+fprintf('\n=== Step 1 erfolgreich abgeschlossen ===\n');
+fprintf('Ergebnisse befinden sich im Ordner: %s\n', procDir);
+
+% Helper
 function [S, meta] = load_and_parse_file(filepath)
     [~, fname, ~] = fileparts(filepath);
     S = load(filepath);
-    meta = struct();
-    meta.filename = fname;
+    meta = struct('filename', fname);
     
-    % Regex für Variante und Position
     tokens = regexp(fname, '^(.*?)[_,]Pos[_,]?(\w+)', 'tokens', 'once', 'ignorecase');
     if ~isempty(tokens)
         meta.variante = tokens{1};
