@@ -26,19 +26,39 @@ Auswertung_IR/
 
 ## 🚀 Setup & Installation
 
-1.  **Voraussetzungen:**
+1.  **Code herunterladen:**
+    Lade das Repository als ZIP-Datei herunter oder klone es via Git:
+    ```bash
+    git clone https://github.com/DEIN_REPO_URL/Auswertung_IR.git
+    ```
+
+2.  **Voraussetzungen:**
     *   MATLAB (empfohlen: R2020b oder neuer).
     *   Signal Processing Toolbox.
 
-2.  **Daten vorbereiten:**
+3.  **Daten vorbereiten:**
         Rohdaten sind abrufbar über: https://hsmittweidade.sharepoint.com/:u:/s/AC23wC-BModellmesstechnikWS2526/IQCT3bEf9VnFSre2CB-VnTCgAZyCwW9NYad185TLK9cJSak?e=ySUWOa
         
     *   Lege die Rohmessungen (`.mat`) in den Ordner `dataraw/`.
     *   Stelle sicher, dass die Dateinamen dem Schema folgen (z. B. `Variante_1_Pos1.mat` oder `...Quelle...`), damit die Regex-Parser korrekt arbeiten.
 
-3.  **Verarbeitung (Preprocessing):**
+4.  **Verarbeitung (Preprocessing):**
     *   Bevor die Visualisierungs-Tools genutzt werden können, müssen die Rohdaten verarbeitet werden (DC-Removal, Truncation, Spektrumberechnung).
     *   Führe hierfür das Skript `step1_process_data.m` (falls vorhanden) aus, um die Dateien im Ordner `processed/` zu generieren.
+
+## 📍 Messaufbau & Positionen
+
+Die Messungen wurden in einem definierten Raster durchgeführt. Für die Heatmap-Visualisierung (`interactive_plotter.m`) und die räumliche Zuordnung gilt folgendes 4x4-Layout:
+
+| Reihe \ Spalte | 1 | 2 | 3 | 4 |
+| :--- | :---: | :---: | :---: | :---: |
+| **1** | Pos 1 | Pos 2 | Pos 3 | Pos 4 |
+| **2** | Pos 5 | Pos 6 | Pos 7 | Pos 8 |
+| **3** | Pos 9 | Pos 10 | Pos 11 | Pos 12 |
+| **4** | **Quelle (Q1)** | Pos 13 | Pos 14 | Pos 15 |
+
+*   **Quelle (Q1):** Befindet sich an der Position unten links (Reihe 4, Spalte 1).
+*   **Pos 1-15:** Mikrofonpositionen im Raum.
 
 ## 🛠 Funktionsweise der Skripte
 
