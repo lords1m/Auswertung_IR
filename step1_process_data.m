@@ -9,7 +9,7 @@ if ~isempty(scriptDir), cd(scriptDir); end
 addpath('functions'); 
 
 % --- Config ---
-dataDir = 'data';
+dataDir = 'dataraw';
 procDir = 'processed';
 fs = 500e3; % Abtastrate
 
