@@ -11,7 +11,7 @@ Die folgende Struktur wird für den reibungslosen Ablauf erwartet:
 ```text
 Auswertung_IR/
 ├── data/                  # Rohdaten (.mat Dateien der Messungen)
-├── processed/             # Verarbeitete Daten (Result-Structs, generiert durch Step 1)
+├── processed/             # Verarbeitete Daten (Result-Structs, wird automatisch generiert durch Step 1)
 ├── functions/             # Hilfsfunktionen (z.B. Terz-Berechnung, IR-Truncation)
 ├── Plots/                 # (Automatisch erstellt) Speicherort für exportierte Bilder
 ├── Videos/                # (Automatisch erstellt) Speicherort für Heatmap-Videos
@@ -20,7 +20,7 @@ Auswertung_IR/
 ├── Darstellung_Pegel_ueber_Entfernung.m # Analyse des 1/r-Gesetzes und 3D-Raum-Plots
 ├── Darstellung_Heatmap_Video.m      # Erstellt Videos der Energieausbreitung
 ├── Terzpegel_DBFs_einzeln.m         # Batch-Plotter für Terzspektren
-├── Visualize_Terzband_Filter.m      # Debugging-Tool für Filterkurven
+├── Visualize_Terzband_Filter.m      # Darstellung der angewanten Filterkurven
 └── README.md                        # Diese Datei
 ```
 
