@@ -33,10 +33,10 @@ function [L_dBFS, L_sum, f_mitten] = calc_terz_spectrum(ir, fs, FS_global, dist,
     if dist > 0
         % Parameter: 101.325 kPa, T, LF
         [~, A_lin, ~] = airabsorb(101.325, fs, N_fft, T, LF, dist);
-        
-        % Korrektur anwenden (Multiplikation, da A_lin > 1 die Dämpfung repräsentiert)
-        % Wir wollen den Verlust "rückgängig" machen.
-        X = X .* A_lin(:); % A_lin muss Spaltenvektor sein
+
+        % Korrektur anwenden: A_lin = 10^(A_dB/20) > 1 für Dämpfung
+        % Um Dämpfung zu kompensieren, muss das Signal verstärkt werden: Multiplikation mit A_lin
+        X = X .* A_lin(:);
     end
     
     % Nur positive Frequenzen

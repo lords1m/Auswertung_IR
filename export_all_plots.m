@@ -3,7 +3,28 @@ function export_all_plots()
     % Erstellt für jede Messung aus dem 'processed' Ordner alle verfügbaren
     % Darstellungen (außer Heatmap) und speichert sie als PNG-Dateien
 
-    % --- Konfiguration ---
+    % =====================================================================
+    % KONFIGURATION - Hier anpassen!
+    % =====================================================================
+
+    % Welche Varianten sollen exportiert werden?
+    % Optionen:
+    %   - 'all'          : Alle Varianten
+    %   - {'V1', 'V2'}   : Nur spezifische Varianten (Zellenarray)
+    %   - 'Variante1'    : Einzelne Variante (String)
+    exportVarianten = 'all';
+
+    % Welche Plot-Typen sollen exportiert werden?
+    % 1 = Spektrum, 2 = Impulsantwort, 3 = ETC, 4 = EDC,
+    % 5 = Pegel vs Entfernung, 6 = 3D Scatter, 8 = RT60
+    exportPlotTypes = [1, 2, 3, 4, 5, 6, 8];  % Alle außer Heatmap (7)
+    % Beispiele:
+    %   [1, 8]           : Nur Spektrum und RT60
+    %   [1, 2, 3, 4]     : Nur Zeitbereich-Plots
+    %   [5, 6]           : Nur räumliche Plots
+
+    % =====================================================================
+
     addpath('functions');
     procDir = 'processed';
     dataDir = 'data';
@@ -60,12 +81,44 @@ function export_all_plots()
     % Frequenzfilter: Nur 4 kHz - 63 kHz
     useFreqFilter = true;
 
-    % --- Alle Dateien durchgehen ---
-    fprintf('Starte Export für %d Dateien...\n\n', length(procFiles));
+    % --- Varianten-Filter anwenden ---
+    if ischar(exportVarianten) && strcmp(exportVarianten, 'all')
+        % Alle Dateien
+        filesToProcess = procFiles;
+        variantenList = {'Alle'};
+    else
+        % Nur bestimmte Varianten
+        if ischar(exportVarianten)
+            variantenList = {exportVarianten}; % In Zellenarray konvertieren
+        else
+            variantenList = exportVarianten;
+        end
 
-    for fileIdx = 1:length(procFiles)
-        filename = procFiles(fileIdx).name;
-        fprintf('Verarbeite %s (%d/%d)...\n', filename, fileIdx, length(procFiles));
+        filesToProcess = [];
+        for v = 1:length(variantenList)
+            varName = variantenList{v};
+            matchedFiles = dir(fullfile(procDir, sprintf('Proc_%s_*.mat', varName)));
+            filesToProcess = [filesToProcess; matchedFiles]; %#ok<AGROW>
+        end
+
+        if isempty(filesToProcess)
+            error('Keine Dateien für die angegebenen Varianten gefunden: %s', strjoin(variantenList, ', '));
+        end
+    end
+
+    % --- Alle Dateien durchgehen ---
+    fprintf('=== Export-Konfiguration ===\n');
+    fprintf('Varianten: %s\n', strjoin(variantenList, ', '));
+    fprintf('Plot-Typen: ');
+    for pt = exportPlotTypes
+        fprintf('%s ', plotTypeNames{pt});
+    end
+    fprintf('\n');
+    fprintf('Anzahl zu verarbeitende Dateien: %d\n\n', length(filesToProcess));
+
+    for fileIdx = 1:length(filesToProcess)
+        filename = filesToProcess(fileIdx).name;
+        fprintf('Verarbeite %s (%d/%d)...\n', filename, fileIdx, length(filesToProcess));
 
         % Daten laden
         R = loadData(filename, procDir);
@@ -73,8 +126,8 @@ function export_all_plots()
         % Basisname für Ausgabedateien (ohne "Proc_" und ".mat")
         baseName = cleanName(filename);
 
-        % --- Alle Plot-Typen durchgehen (außer Heatmap = 7) ---
-        for plotType = [1, 2, 3, 4, 5, 6, 8]
+        % --- Gewählte Plot-Typen durchgehen ---
+        for plotType = exportPlotTypes
 
             % Figur erstellen (unsichtbar für Performance)
             fig = figure('Visible', 'off', 'Color', 'w', 'Position', [0 0 1000 700]);

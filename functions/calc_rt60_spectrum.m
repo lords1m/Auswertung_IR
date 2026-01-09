@@ -20,8 +20,8 @@ function [t60_vals, f_center] = calc_rt60_spectrum(ir, fs, T, LF)
     for k = 1:length(f_exact)
         fc = f_exact(k);
         % Terzband-Grenzen
-        fl = fc / 2^(1/6);
-        fu = fc * 2^(1/6);
+        fl = fc * 10^(-1/20); % Konsistent mit calc_terz_spectrum (Basis 10)
+        fu = fc * 10^(1/20);
         
         if fu >= fs/2, continue; end
         
@@ -78,7 +78,8 @@ function [t60_vals, f_center] = calc_rt60_spectrum(ir, fs, T, LF)
                         
                         c = 343;
                         if m_air > 0
-                            T_air = 55.3 / (c * m_air);
+                            % Für Dämpfung in dB/m ist die Konstante 60 (nicht 55.3)
+                            T_air = 60.0 / (c * m_air);
                             
                             % Korrektur anwenden (nur wenn T_meas < T_air)
                             if T_meas < T_air

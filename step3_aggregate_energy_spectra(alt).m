@@ -85,8 +85,10 @@ for k = 1:length(variants)
         % Summe der linearen Energien
         total_energy = sum(T_main.Energie_Linear(mask));
         
-        % Durchschnittlicher Summenpegel (arithmetisch in dB)
-        avg_level = mean(T_main.Summenpegel_dB(mask));
+        % Durchschnittlicher Summenpegel (Energetisch gemittelt!)
+        % Falsch: mean(dB). Richtig: 10*log10(mean(10^(dB/10)))
+        levels_lin = 10.^(T_main.Summenpegel_dB(mask) ./ 10);
+        avg_level = 10 * log10(mean(levels_lin));
         
         % Durchschnittliches Spektrum
         avg_spec = mean(spectra_matrix(mask, :), 1);
