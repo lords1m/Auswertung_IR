@@ -27,10 +27,10 @@ fprintf('Arbeitsverzeichnis: %s\n', pwd);
 % - Für eine Einzelmessung: { 'Varianten-Name', Positions-Nummer }
 % - Für eine ganze Variante: { 'Varianten-Name', [] } (leere Klammern)
 messungen = { ...
-    {'Variante_1', []}, ...       % Plot-Beispiel: Alle Positionen ([])von Variante 1
-    {'Variante_2', []}, ...
-    {'Variante_3', []}, ... 
-    {'Variante_4', []}, ...       % Plot-Beispiel: Nur Position 1 von Variante 2
+    {'Variante_1', 1}, ...       % Plot-Beispiel: Alle Positionen ([])von Variante 1
+    %{'Variante_2', []}, ...
+   % {'Variante_3', []}, ... 
+   % {'Variante_4', []}, ...       % Plot-Beispiel: Nur Position 1 von Variante 2
 };
 
 % --- Allgemeine Einstellungen ---
@@ -40,6 +40,7 @@ selectedPositions = 1:14; % Wenn eine ganze Variante geplottet wird, werden dies
 
 % --- Physikalische & Plot-Parameter ---
 fs = 500e3; % 500 kHz Abtastrate
+y_limits = [-70, 10]; % Feste Y-Achsen-Grenzen für Vergleichbarkeit aller Plots
 
 %% ---------------- Setup & Dateiprüfung ----------------
 if ~exist(dataDir, 'dir'), error('Datenordner "%s" nicht gefunden!', dataDir); end
@@ -101,13 +102,15 @@ if isempty(all_L_dBFS)
     error('Keine einzige der ausgewählten Messungen konnte verarbeitet werden. Es wird kein Plot erstellt.');
 end
 
-% Berechne globale Y-Achsen-Range
-validData = all_L_dBFS(~isnan(all_L_dBFS));
-if ~isempty(validData)
-    y_range = [floor(min(validData)/10)*10, ceil(max(validData)/10)*10];
-else
-    y_range = [-80, 0]; % Fallback
-end
+% Globale Y-Achsen-Range (Festgelegt für Vergleichbarkeit)
+% Falls Auto-Scaling gewünscht ist, kann dieser Block einkommentiert werden:
+% validData = all_L_dBFS(~isnan(all_L_dBFS));
+% if ~isempty(validData)
+%     y_range = [floor(min(validData)/10)*10, ceil(max(validData)/10)*10];
+% else
+%     y_range = [-80, 0]; % Fallback
+% end
+y_range = y_limits;
 
 fprintf('Globale Y-Achsen-Range: [%.1f, %.1f] dBFS\n', y_range(1), y_range(2));
 
@@ -123,7 +126,7 @@ for i = 1:numel(all_plot_data)
     % Stairs Diagramm (Index-basiert wie interactive_plotter)
     % Daten erweitern, damit der letzte Balken gezeichnet wird
     y_plot = [data.L_dBFS, data.L_dBFS(end)];
-    x_plot = 1:length(y_plot);
+    x_plot = (1:length(y_plot)) - 0.5;
     
     stairs(x_plot, y_plot, 'LineWidth', 2, 'Color', [0 0.4470 0.7410]);
 
@@ -140,7 +143,7 @@ for i = 1:numel(all_plot_data)
     set(gca, 'XTickLabel', x_labels);
     xtickangle(45);
     
-    xlim([0.5, length(data.f_terz) + 1.5]);
+    xlim([0, length(data.f_terz) + 1]);
     ylim(y_range); % Globale Y-Achsen-Range verwenden
 
     set(gcf, 'Color', 'w');

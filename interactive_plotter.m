@@ -17,6 +17,18 @@ function interactive_plotter()
     % Cache für Heatmap-Daten (um Neuladen beim Slider-Bewegen zu vermeiden)
     heatmapCache = struct('variante1', '', 'data1', [], 'variante2', '', 'data2', []); % data ist jetzt Map
 
+    % --- Y-Achsen-Speicher pro Plot-Typ ---
+    lastPlotType = 1;
+    ySettings = containers.Map('KeyType', 'double', 'ValueType', 'any');
+    ySettings(1) = [-70, 10];    % Spektrum
+    ySettings(2) = [-1.1, 1.1];  % IR
+    ySettings(3) = [-60, 5];     % ETC
+    ySettings(4) = [-60, 5];     % EDC
+    ySettings(5) = [-70, 0];     % Pegel vs Dist
+    ySettings(6) = [-70, 0];     % 3D
+    ySettings(7) = [-60, 0];     % Heatmap (Threshold)
+    ySettings(8) = [0, 2.5];     % T30
+
     % Versuche, die globale Referenz (FS_global) aus einer verarbeiteten Datei zu laden,
     % damit die Raw-Daten im Spektrum identisch skaliert sind wie die Processed-Daten.
     FS_global_ref = 1.0;
@@ -67,55 +79,55 @@ function interactive_plotter()
                        'String', fileList, 'Callback', @updatePlot, 'Enable', 'off');
 
     % Plot Typ
-    uicontrol(pnlControl, 'Style', 'text', 'Position', [10 200 200 20], 'String', 'Darstellung:', 'HorizontalAlignment', 'left');
+    uicontrol(pnlControl, 'Style', 'text', 'Position', [10 205 200 15], 'String', 'Darstellung:', 'HorizontalAlignment', 'left');
     hType = uicontrol(pnlControl, 'Style', 'popupmenu', 'Position', [10 180 200 25], ...
                       'String', {'Frequenzspektrum (Terz)', 'Impulsantwort (Zeit)', 'Energie über Zeit (ETC)', 'Energy Decay Curve (EDC)', 'Pegel über Entfernung', '3D Scatter (Raum)', 'Heatmap (Raumzeit)', 'Nachhallzeit (T30) über Frequenz'}, ...
-                      'Callback', @updatePlot);
+                      'Callback', @onTypeChange);
 
     % Frequenzfilter Checkbox
-    hFilterFreq = uicontrol(pnlControl, 'Style', 'checkbox', 'Position', [10 195 200 20], ...
-                            'String', 'Nur 4 kHz - 60 kHz', 'Value', 1, ...
+    hFilterFreq = uicontrol(pnlControl, 'Style', 'checkbox', 'Position', [10 155 200 20], ...
+                            'String', 'Nur 4 kHz - 63 kHz', 'Value', 1, ...
                             'Callback', @updatePlot);
 
     % Achsengrenzen - Y-Achse
-    uicontrol(pnlControl, 'Style', 'text', 'Position', [10 175 80 15], 'String', 'Y-Achse:', 'HorizontalAlignment', 'left', 'FontSize', 8);
-    uicontrol(pnlControl, 'Style', 'text', 'Position', [10 155 30 15], 'String', 'Min:', 'HorizontalAlignment', 'left', 'FontSize', 8);
-    hYMin = uicontrol(pnlControl, 'Style', 'edit', 'Position', [40 155 35 20], 'String', '-30', 'Callback', @updatePlot);
-    uicontrol(pnlControl, 'Style', 'text', 'Position', [80 155 30 15], 'String', 'Max:', 'HorizontalAlignment', 'left', 'FontSize', 8);
-    hYMax = uicontrol(pnlControl, 'Style', 'edit', 'Position', [110 155 35 20], 'String', '5', 'Callback', @updatePlot);
-    hFixedScale = uicontrol(pnlControl, 'Style', 'checkbox', 'Position', [150 155 60 20], ...
+    hLblYAxis = uicontrol(pnlControl, 'Style', 'text', 'Position', [10 135 80 15], 'String', 'Y-Achse:', 'HorizontalAlignment', 'left', 'FontSize', 8);
+    hLblYMin = uicontrol(pnlControl, 'Style', 'text', 'Position', [10 115 30 15], 'String', 'Min:', 'HorizontalAlignment', 'left', 'FontSize', 8);
+    hYMin = uicontrol(pnlControl, 'Style', 'edit', 'Position', [40 115 35 20], 'String', '-70', 'Callback', @updatePlot);
+    hLblYMax = uicontrol(pnlControl, 'Style', 'text', 'Position', [80 115 30 15], 'String', 'Max:', 'HorizontalAlignment', 'left', 'FontSize', 8);
+    hYMax = uicontrol(pnlControl, 'Style', 'edit', 'Position', [110 115 35 20], 'String', '10', 'Callback', @updatePlot);
+    hFixedScale = uicontrol(pnlControl, 'Style', 'checkbox', 'Position', [150 115 60 20], ...
                             'String', 'Fix', 'Value', 1, 'Callback', @updatePlot, 'FontSize', 8);
 
     % Energie-Modus Checkbox (für Pegel über Entfernung)
-    hEnergyMode = uicontrol(pnlControl, 'Style', 'checkbox', 'Position', [10 130 200 20], ...
+    hEnergyMode = uicontrol(pnlControl, 'Style', 'checkbox', 'Position', [10 90 200 20], ...
                             'String', 'Energie (Linear) statt dB', 'Value', 0, ...
                             'Callback', @updatePlot);
 
     % --- Heatmap Controls (versteckt bis benötigt) ---
-    lblTime = uicontrol(pnlControl, 'Style', 'text', 'Position', [10 175 200 20], ...
+    lblTime = uicontrol(pnlControl, 'Style', 'text', 'Position', [10 155 200 15], ...
                         'String', 'Zeit: 0.0 ms', 'Visible', 'off', 'HorizontalAlignment', 'left');
-    hSliderTime = uicontrol(pnlControl, 'Style', 'slider', 'Position', [10 155 200 20], ...
+    hSliderTime = uicontrol(pnlControl, 'Style', 'slider', 'Position', [10 135 200 20], ...
                             'Min', -5, 'Max', 100, 'Value', 0, 'Visible', 'off', ...
                             'SliderStep', [0.001 0.05], ...
                             'Callback', @updateHeatmapFrame);
 
     % Schwellenwert-Eingabe für Heatmap
-    lblThreshold = uicontrol(pnlControl, 'Style', 'text', 'Position', [10 130 50 20], ...
+    lblThreshold = uicontrol(pnlControl, 'Style', 'text', 'Position', [10 90 50 20], ...
                              'String', 'Min dB:', 'Visible', 'off', 'HorizontalAlignment', 'left');
-    hEditThreshold = uicontrol(pnlControl, 'Style', 'edit', 'Position', [65 130 50 20], ...
+    hEditThreshold = uicontrol(pnlControl, 'Style', 'edit', 'Position', [65 90 50 20], ...
                                'String', '-60', 'Visible', 'off', ...
                                'Callback', @updatePlot);
 
-    hBtnPlay = uicontrol(pnlControl, 'Style', 'pushbutton', 'Position', [10 100 200 30], ...
+    hBtnPlay = uicontrol(pnlControl, 'Style', 'pushbutton', 'Position', [10 60 200 25], ...
                          'String', 'Play Animation', 'Visible', 'off', ...
                          'Callback', @playAnimation);
 
     % Speichern Button
-    uicontrol(pnlControl, 'Style', 'pushbutton', 'Position', [10 60 200 30], ...
+    uicontrol(pnlControl, 'Style', 'pushbutton', 'Position', [10 35 200 25], ...
               'String', 'Plot speichern', 'Callback', @savePlot);
 
     % Batch Export Button
-    uicontrol(pnlControl, 'Style', 'pushbutton', 'Position', [10 10 200 30], ...
+    uicontrol(pnlControl, 'Style', 'pushbutton', 'Position', [10 5 200 25], ...
               'String', 'Batch Export (Variante)', 'Callback', @batchExport);
 
     % Initialer Aufruf
@@ -171,6 +183,26 @@ function interactive_plotter()
         updatePlot();
     end
 
+    function onTypeChange(~, ~)
+        newType = hType.Value;
+        if newType == lastPlotType, return; end
+        
+        % Speichere aktuelle Werte für den alten Typ
+        currMin = str2double(get(hYMin, 'String'));
+        currMax = str2double(get(hYMax, 'String'));
+        if ~isnan(currMin) && ~isnan(currMax)
+            ySettings(lastPlotType) = [currMin, currMax];
+        end
+        
+        % Lade Werte für den neuen Typ
+        newVals = ySettings(newType);
+        set(hYMin, 'String', num2str(newVals(1)));
+        set(hYMax, 'String', num2str(newVals(2)));
+        
+        lastPlotType = newType;
+        updatePlot();
+    end
+
     function updatePlot(~, ~)
         % Listen holen
         list1 = get(hFile1, 'String');
@@ -204,8 +236,14 @@ function interactive_plotter()
         yMax = str2double(get(hYMax, 'String'));
 
         % Validierung
-        if isnan(yMin), yMin = -30; set(hYMin, 'String', '-30'); end
-        if isnan(yMax), yMax = 5; set(hYMax, 'String', '5'); end
+        if isnan(yMin) || isnan(yMax)
+            defaults = ySettings(plotType);
+            if isnan(yMin), yMin = defaults(1); set(hYMin, 'String', num2str(yMin)); end
+            if isnan(yMax), yMax = defaults(2); set(hYMax, 'String', num2str(yMax)); end
+        end
+        
+        % Speichere aktuelle (validierte) Werte in Settings
+        ySettings(plotType) = [yMin, yMax];
 
         % UI Sichtbarkeit steuern
         if plotType == 7 % Heatmap
@@ -216,6 +254,12 @@ function interactive_plotter()
             set(hEditThreshold, 'Visible', 'on');
             set(hFixedScale, 'Visible', 'off');
             set(hFilterFreq, 'Visible', 'off');
+            set(hYMin, 'Visible', 'off');
+            set(hYMax, 'Visible', 'off');
+            set(hLblYAxis, 'Visible', 'off');
+            set(hLblYMin, 'Visible', 'off');
+            set(hLblYMax, 'Visible', 'off');
+            set(hEnergyMode, 'Visible', 'off');
         else
             set(hSliderTime, 'Visible', 'off');
             set(lblTime, 'Visible', 'off');
@@ -224,6 +268,17 @@ function interactive_plotter()
             set(hEditThreshold, 'Visible', 'off');
             set(hFixedScale, 'Visible', 'on');
             set(hFilterFreq, 'Visible', 'on');
+            set(hYMin, 'Visible', 'on');
+            set(hYMax, 'Visible', 'on');
+            set(hLblYAxis, 'Visible', 'on');
+            set(hLblYMin, 'Visible', 'on');
+            set(hLblYMax, 'Visible', 'on');
+            
+            if plotType == 5 || plotType == 6
+                set(hEnergyMode, 'Visible', 'on');
+            else
+                set(hEnergyMode, 'Visible', 'off');
+            end
         end
 
         % --- AXES MANAGEMENT ---
@@ -246,35 +301,40 @@ function interactive_plotter()
                 f_vec = R1.freq.f_center;
                 y1 = R1.freq.terz_dbfs;
                 
-                % Filter anwenden (4k - 60k)
+                % Filter anwenden (4k - 63k)
                 if useFreqFilter
-                    mask = (f_vec >= 4000) & (f_vec <= 60000);
+                    mask = (f_vec >= 4000) & (f_vec <= 64000);
                 else
                     mask = true(size(f_vec));
                 end
                 
                 f_sub = f_vec(mask);
                 y1_sub = y1(mask);
-                x_idx = 1:length(f_sub); % Indizes für gleichmäßige Darstellung
+                
+                % Daten erweitern für stairs (wie in Terzpegel_DBFs_einzeln.m)
+                y1_plot = [y1_sub, y1_sub(end)];
+                x_plot = (1:length(y1_plot)) - 0.5;
                 
                 % Labels für X-Achse generieren
                 x_labels = arrayfun(@(x) sprintf('%g', x), f_sub, 'UniformOutput', false);
+                x_ticks = 1:length(f_sub);
                 
                 if isCompare
                     y2 = R2.freq.terz_dbfs;
                     y2_sub = y2(mask);
+                    y2_plot = [y2_sub, y2_sub(end)];
                     
                     % Oben: Beide Spektren
                     axes(ax1); 
                     name1_leg = sprintf('%s (L_{sum}=%.1f dB)', cleanName(name1), R1.freq.sum_level);
                     name2_leg = sprintf('%s (L_{sum}=%.1f dB)', cleanName(name2), R2.freq.sum_level);
                     
-                    stairs(x_idx, y1_sub, 'b-', 'LineWidth', 1.5, 'DisplayName', name1_leg); hold on;
-                    stairs(x_idx, y2_sub, 'r-', 'LineWidth', 1.5, 'DisplayName', name2_leg);
+                    stairs(x_plot, y1_plot, 'b-', 'LineWidth', 1.5, 'DisplayName', name1_leg); hold on;
+                    stairs(x_plot, y2_plot, 'r-', 'LineWidth', 1.5, 'DisplayName', name2_leg);
                     grid on; legend show; ylabel('Pegel [dBFS]'); title('Frequenzgang Vergleich');
-                    set(gca, 'XTick', x_idx, 'XTickLabel', x_labels);
+                    set(gca, 'XTick', x_ticks, 'XTickLabel', x_labels);
                     xtickangle(45);
-                    xlim([0.5 length(f_sub)+0.5]);
+                    xlim([0 length(f_sub)+1]);
                     if useFixedScale
                         ylim([yMin yMax]);
                     end
@@ -282,21 +342,21 @@ function interactive_plotter()
                     % Unten: Differenz
                     axes(ax2);
                     diff_y = y2_sub - y1_sub;
-                    bar(x_idx, diff_y, 'FaceColor', [0.5 0.5 0.5]);
+                    bar(x_ticks, diff_y, 'FaceColor', [0.5 0.5 0.5], 'BarWidth', 1);
                     grid on; ylabel('Differenz [dB]'); xlabel('Frequenz [Hz]');
                     title('Differenz (Messung 2 - Messung 1)');
-                    set(gca, 'XTick', x_idx, 'XTickLabel', x_labels);
+                    set(gca, 'XTick', x_ticks, 'XTickLabel', x_labels);
                     xtickangle(45);
-                    xlim([0.5 length(f_sub)+0.5]);
+                    xlim([0 length(f_sub)+1]); % Gleiche Limits wie oben für Alignment
                 else
                     % Einzelplot
                     % ax ist bereits aktiv
-                    stairs(x_idx, y1_sub, 'b-', 'LineWidth', 2);
+                    stairs(x_plot, y1_plot, 'b-', 'LineWidth', 2);
                     grid on; xlabel('Frequenz [Hz]'); ylabel('Pegel [dBFS]');
                     title(sprintf('Spektrum: %s (L_{sum} = %.1f dB)', cleanName(name1), R1.freq.sum_level));
-                    set(gca, 'XTick', x_idx, 'XTickLabel', x_labels);
+                    set(gca, 'XTick', x_ticks, 'XTickLabel', x_labels);
                     xtickangle(45);
-                    xlim([0.5 length(f_sub)+0.5]);
+                    xlim([0 length(f_sub)+1]);
                     if useFixedScale
                         ylim([yMin yMax]);
                     end
@@ -577,10 +637,15 @@ function interactive_plotter()
     function [t60_vals, f_center] = calc_rt60_spectrum(ir, fs)
         % Frequenzen (Standard-Terz nach IEC 61260, 4k - 63k)
         f_center = [4000 5000 6300 8000 10000 12500 16000 20000 25000 31500 40000 50000 63000];
+        
+        % Exakte Mittenfrequenzen für die Filterberechnung (Basis 10)
+        % Indizes n=6 (4k) bis n=18 (63k) bezogen auf 1 kHz
+        f_exact = 1000 * 10.^((6:18)/10);
+        
         t60_vals = NaN(size(f_center));
         
-        for k = 1:length(f_center)
-            fc = f_center(k);
+        for k = 1:length(f_exact)
+            fc = f_exact(k);
             % Bandgrenzen für Terzfilter
             fl = fc / 2^(1/6);
             fu = fc * 2^(1/6);
