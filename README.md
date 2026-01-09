@@ -52,7 +52,7 @@ Eine umfangreiche GUI zum explorativen Analysieren der Daten.
     *   3D-Raum-Visualisierung.
     *   Raumzeit-Heatmap (mit Slider und Animation).
     *   Nachhallzeit (T30) über Frequenz.
-*   **Export:** Ermöglicht das Speichern von Plots und Batch-Export ganzer Varianten.
+*   **Export:** Ermöglicht das Speichern von Plots und Batch-Export(funktioniert noch nicht richtig) ganzer Varianten.
 
 ### 2. `Darstellung_Pegel_ueber_Entfernung.m`
 Fokussiert auf die physikalische Ausbreitung des Schalls im Raum.
