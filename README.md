@@ -37,8 +37,7 @@ Auswertung_IR/
     *   Signal Processing Toolbox.
 
 3.  **Daten vorbereiten:**
-        Rohdaten sind abrufbar über: https://hsmittweidade.sharepoint.com/:u:/s/AC23wC-BModellmesstechnikWS2526/IQCT3bEf9VnFSre2CB-VnTCgAZyCwW9NYad185TLK9cJSak?e=ySUWOa
-        
+
     *   Lege die Rohmessungen (`.mat`) in den Ordner `dataraw/`.
     *   Stelle sicher, dass die Dateinamen dem Schema folgen (z. B. `Variante_1_Pos1.mat` oder `...Quelle...`), damit die Regex-Parser korrekt arbeiten.
 
