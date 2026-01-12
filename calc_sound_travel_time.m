@@ -28,7 +28,7 @@ clear; clc;
 
 % Strecke(n) in Metern [m]
 % Kann ein einzelner Wert oder ein Vektor sein
-s = 0.2;              % Beispiel: 1.4 m
+s = 0.3;              % Beispiel: 1.4 m
 % s = [1, 2, 5, 10, 20];  % Beispiel: mehrere Strecken
 
 % Temperatur in Grad Celsius [°C]

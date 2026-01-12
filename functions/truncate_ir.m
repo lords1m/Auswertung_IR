@@ -1,5 +1,8 @@
-function [ir_trunc, metrics] = truncate_ir(ir)
+function [ir_trunc, metrics] = truncate_ir(ir, fixed_length_samples)
     % Schneidet IR zu (Start bei Impuls, Ende bei Rauschen)
+    % Optional: fixed_length_samples erzwingt eine feste Länge ab Start (mit Padding)
+    
+    if nargin < 2, fixed_length_samples = 0; end
     
     % DC entfernen
     ir = ir - mean(ir);
@@ -21,41 +24,6 @@ function [ir_trunc, metrics] = truncate_ir(ir)
     mu_noise = mean(noise_section);
     std_noise = std(noise_section);
     
-    % Schwellwert für Ende (6 Sigma oder min. -50dB)
-    threshold_end = max(mu_noise + 6*std_noise, max_amp * 0.003); 
-    
-    % Glättung für Hüllkurve
-    window_size = 1000;
-    if N > window_size
-        env = movmean(ir_abs, window_size);
-    else
-        env = ir_abs;
-    end
-    
-    % Ende finden
-    [~, idx_peak] = max(env);
-    min_silence_samples = 10000; 
-    
-    if idx_peak < N
-        post_peak_env = env(idx_peak:end);
-        local_max_future = movmax(post_peak_env, [0, min_silence_samples]);
-        
-        % Erster Punkt, ab dem Signal dauerhaft unter Schwelle bleibt
-        idx_silence_start = find(local_max_future < threshold_end, 1, 'first');
-        
-        if ~isempty(idx_silence_start)
-            idx_end = idx_peak + idx_silence_start - 1;
-        else
-            idx_end = find(env > threshold_end, 1, 'last');
-            if isempty(idx_end), idx_end = N; end
-        end
-    else
-        idx_end = N;
-    end
-    
-    % Puffer am Ende
-    idx_end = min(N, idx_end + 5000);
-    
     % Start finden (1% Schwelle)
     threshold_start = max_amp * 0.01;
     idx_start = find(ir_abs > threshold_start, 1, 'first');
@@ -67,10 +35,38 @@ function [ir_trunc, metrics] = truncate_ir(ir)
         idx_start = max(1, idx_start - 500);
     end
     
-    if idx_end < idx_start, idx_end = N; end
-    
-    % Zuschnitt
-    ir_trunc = ir(idx_start:idx_end);
+    if fixed_length_samples > 0
+        % --- Modus: Feste Länge ---
+        idx_end = idx_start + fixed_length_samples - 1;
+        
+        if idx_end <= N
+            ir_trunc = ir(idx_start:idx_end);
+        else
+            % Padding mit Nullen, falls Signal zu kurz ist
+            padding = zeros(idx_end - N, 1);
+            ir_trunc = [ir(idx_start:end); padding];
+        end
+    else
+        % --- Modus: Dynamisches Ende (Original) ---
+        threshold_end = max(mu_noise + 6*std_noise, max_amp * 0.003); 
+        window_size = 1000;
+        if N > window_size, env = movmean(ir_abs, window_size); else, env = ir_abs; end
+        
+        [~, idx_peak] = max(env);
+        min_silence_samples = 10000; 
+        
+        if idx_peak < N
+            post_peak_env = env(idx_peak:end);
+            local_max_future = movmax(post_peak_env, [0, min_silence_samples]);
+            idx_silence_start = find(local_max_future < threshold_end, 1, 'first');
+            if ~isempty(idx_silence_start), idx_end = idx_peak + idx_silence_start - 1;
+            else, idx_end = find(env > threshold_end, 1, 'last'); if isempty(idx_end), idx_end = N; end, end
+        else, idx_end = N; end
+        
+        idx_end = min(N, idx_end + 5000); % Puffer
+        if idx_end < idx_start, idx_end = N; end
+        ir_trunc = ir(idx_start:idx_end);
+    end
     
     % Metriken
     metrics.idx_start = idx_start;

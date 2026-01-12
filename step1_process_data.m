@@ -11,6 +11,8 @@ addpath('functions');
 dataDir = 'dataraw';
 procDir = 'processed';
 fs = 500e3; % Abtastrate
+use_fixed_length = true; % Setze auf true für feste Länge aller IRs
+fixed_duration_s = 0.1;  % Gewünschte Länge in Sekunden (z.B. 0.2s = 100k Samples)
 
 fprintf('=== Step 1: Datenverarbeitung gestartet ===\n');
 fprintf('Konfiguration:\n');
@@ -106,7 +108,12 @@ for i = 1:length(files)
     fprintf('  - Rohdaten extrahiert: %d Samples\n', length(ir_raw));
 
     % Truncate
-    [ir_trunc, metrics] = truncate_ir(ir_raw);
+    target_samples = 0;
+    if use_fixed_length
+        target_samples = round(fixed_duration_s * fs);
+    end
+    [ir_trunc, metrics] = truncate_ir(ir_raw, target_samples);
+    
     fprintf('  - Trunkierte IR: %d Samples (Start: %d, Ende: %d)\n', ...
         length(ir_trunc), metrics.idx_start, metrics.idx_end);
     fprintf('  - SNR: %.2f dB\n', metrics.snr_db);
