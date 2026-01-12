@@ -4,7 +4,7 @@ function interactive_plotter()
     % Config
     addpath('functions');
     procDir = 'processed';
-    dataDir = 'data';
+    dataDir = 'dataraw';
     if ~exist(procDir, 'dir'), errordlg('Ordner "processed" fehlt.', 'Fehler'); return; end
     
     fileList = {}; 
