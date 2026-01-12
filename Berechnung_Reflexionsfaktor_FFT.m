@@ -8,6 +8,7 @@
 % 4. Bestimmt den Reflexionsfaktor R(f) unter Berücksichtigung der Weglängen.
 
 clear; clc; close all;
+addpath('functions');
 
 %% 1. Dateien laden
 fprintf('Bitte wählen Sie die Datei für den DIREKTSCHALL...\n');
@@ -50,15 +51,19 @@ ir_ref_win = ir_ref .* win;
 
 %% 3. Distanzen abfragen
 prompt = {'Abstand Quelle -> Mikro (Direktweg) [m]:', ...
-          'Abstand Quelle -> Wand -> Mikro (Reflexionsweg) [m]:'};
-dlgtitle = 'Geometrie Eingabe';
+          'Abstand Quelle -> Wand -> Mikro (Reflexionsweg) [m]:', ...
+          'Temperatur [°C]:', ...
+          'Luftfeuchte [%]:'};
+dlgtitle = 'Geometrie & Umwelt Eingabe';
 dims = [1 50];
-definput = {'1.7', '3.98'}; % Beispielwerte
+definput = {'1.7', '3.98', '20', '50'}; % Beispielwerte
 answer = inputdlg(prompt, dlgtitle, dims, definput);
 
 if isempty(answer), return; end
 d_dir = str2double(answer{1});
 d_ref = str2double(answer{2});
+T = str2double(answer{3});
+LF = str2double(answer{4});
 
 %% 4. FFT & Berechnung
 
@@ -74,12 +79,24 @@ f = f(valid_idx);
 H_dir = H_dir(valid_idx);
 H_ref = H_ref(valid_idx);
 
-% Berechnung Reflexionsfaktor R(f)
-% Formel: R = (H_ref * d_ref) / (H_dir * d_dir)
-% Herleitung: H_mic ~ (1/d) * H_source  => H_source ~ H_mic * d
-% R = H_source_ref / H_source_dir
+% Luftdämpfungskorrektur berechnen
+try
+    [~, A_lin_dir] = airabsorb(101.325, fs, N_fft, T, LF, d_dir);
+    [~, A_lin_ref] = airabsorb(101.325, fs, N_fft, T, LF, d_ref);
+    
+    % Auf relevante Frequenzen kürzen
+    A_lin_dir = A_lin_dir(valid_idx);
+    A_lin_ref = A_lin_ref(valid_idx);
+    
+    fprintf('Luftdämpfung wurde korrigiert (T=%.1f°C, LF=%.1f%%).\n', T, LF);
+catch
+    warning('Funktion airabsorb nicht gefunden. Keine Luftdämpfungskorrektur.');
+    A_lin_dir = ones(size(H_dir));
+    A_lin_ref = ones(size(H_ref));
+end
 
-R_complex = (H_ref .* d_ref) ./ (H_dir .* d_dir);
+% Berechnung Reflexionsfaktor R(f)
+R_complex = (H_ref .* A_lin_ref .* d_ref) ./ (H_dir .* A_lin_dir .* d_dir);
 R_mag = abs(R_complex);
 
 %% 5. Plot
@@ -100,7 +117,7 @@ semilogx(f, 20*log10(abs(H_dir)), 'b', 'DisplayName', 'Direkt'); hold on;
 semilogx(f, 20*log10(abs(H_ref)), 'r', 'DisplayName', 'Reflexion');
 grid on; legend show;
 xlabel('Frequenz [Hz]'); ylabel('Pegel [dB]');
-title('Frequenzspektrum (Unkorrigiert)');
+title('Frequenzspektrum (Gemessen am Mikrofon, inkl. Wegdämpfung)');
 xlim([1000, fs/2]);
 set(gca, 'XTick', [1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000], ...
          'XTickLabel', {'1k', '2k', '5k', '10k', '20k', '50k', '100k', '200k'});
