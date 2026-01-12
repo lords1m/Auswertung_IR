@@ -4,7 +4,7 @@ Dieses Repository enthält eine Sammlung von MATLAB-Skripten zur Auswertung, Ana
 
 Das Framework bietet sowohl eine interaktive GUI als auch Skripte für Batch-Export und physikalische Analysen (z. B. Pegelabfall über Entfernung).
 
-## 📂 Ordnerstruktur
+## Ordnerstruktur
 
 Die folgende Struktur wird für den reibungslosen Ablauf erwartet:
 
@@ -24,7 +24,7 @@ Auswertung_IR/
 └── README.md                        # Diese Datei
 ```
 
-## 🚀 Setup & Installation
+##  Setup & Installation
 
 1.  **Code herunterladen:**
     Lade das Repository als ZIP-Datei herunter oder klone es via Git:
@@ -45,7 +45,7 @@ Auswertung_IR/
     *   Bevor die Visualisierungs-Tools genutzt werden können, müssen die Rohdaten verarbeitet werden (DC-Removal, Truncation, Spektrumberechnung).
     *   Führe hierfür das Skript `step1_process_data.m` (falls vorhanden) aus, um die Dateien im Ordner `processed/` zu generieren.
 
-## 📍 Messaufbau & Positionen
+##  Messaufbau & Positionen
 
 Die Messungen wurden in einem definierten Raster durchgeführt. Für die Heatmap-Visualisierung (`interactive_plotter.m`) und die räumliche Zuordnung gilt folgendes 4x4-Layout:
 
@@ -59,7 +59,7 @@ Die Messungen wurden in einem definierten Raster durchgeführt. Für die Heatmap
 *   **Quelle (Q1):** Befindet sich an der Position unten links (Reihe 4, Spalte 1).
 *   **Pos 1-15:** Mikrofonpositionen im Raum.
 
-## 🛠 Funktionsweise der Skripte
+## Funktionsweise der Skripte
 
 ### 1. `interactive_plotter.m` (Haupt-Tool)
 Eine umfangreiche GUI zum explorativen Analysieren der Daten.
@@ -94,7 +94,7 @@ Ein Skript für die Stapelverarbeitung von Spektral-Plots.
 *   Nutzt logarithmische X-Achsen oder Terzband-Indizes.
 *   Speichert die Ergebnisse automatisch in `Plots/`.
 
-## ⚙️ Technische Details
+## Technische Details
 
 *   **Abtastrate (fs):** Standardmäßig 500 kHz.
 *   **Frequenzbereich:** Die Analysen konzentrieren sich auf Terzbänder von **4 kHz bis 63 kHz**.
@@ -103,7 +103,7 @@ Ein Skript für die Stapelverarbeitung von Spektral-Plots.
     *   **dBFS:** Pegel relativ zu Full Scale.
     *   **T30:** Nachhallzeit basierend auf dem Abfall von -5 dB auf -35 dB der Schroeder-Integralen.
 
-## 📝 Namenskonventionen
+## Namenskonventionen
 
 Damit die Skripte die Positionen und Varianten korrekt zuordnen können, sollten Dateinamen idealerweise folgende Muster enthalten:
 *   `...PosX...` oder `...Pos_X...` für Empfängerpositionen (z. B. `Pos1`, `Pos12`).
