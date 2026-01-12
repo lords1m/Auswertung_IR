@@ -49,12 +49,12 @@ Auswertung_IR/
 
 Die Messungen wurden in einem definierten Raster durchgeführt. Für die Heatmap-Visualisierung (`interactive_plotter.m`) und die räumliche Zuordnung gilt folgendes 4x4-Layout:
 
-| Reihe \ Spalte | 1 | 2 | 3 | 4 |
+| Y (m) \ X (m) | 0 | 0.3 | 0.6 | 1.2 |
 | :--- | :---: | :---: | :---: | :---: |
-| **1** | Pos 1 | Pos 2 | Pos 3 | Pos 4 |
-| **2** | Pos 5 | Pos 6 | Pos 7 | Pos 8 |
-| **3** | Pos 9 | Pos 10 | Pos 11 | Pos 12 |
-| **4** | **Quelle (Q1)** | Pos 13 | Pos 14 | Pos 15 |
+| **1.2** | Pos 1 | Pos 2 | Pos 3 | Pos 4 |
+| **0.6** | Pos 5 | Pos 6 | Pos 7 | Pos 8 |
+| **0.3** | Pos 9 | Pos 10 | Pos 11 | Pos 12 |
+| **0** | **Quelle (Q1)** | Pos 13 | Pos 14 | Pos 15 |
 
 *   **Quelle (Q1):** Befindet sich an der Position unten links (Reihe 4, Spalte 1).
 *   **Pos 1-15:** Mikrofonpositionen im Raum.
