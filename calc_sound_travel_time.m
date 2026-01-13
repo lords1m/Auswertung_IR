@@ -17,9 +17,6 @@
 %   c = 331.3 * sqrt(T_kel/273.15) * (1 + 0.0016*h)
 %   wobei h der Feuchteanteil ist.
 
-% Author: Claude Code
-% Date: 2026-01-11
-
 clear; clc;
 
 %% ========================================================================
@@ -28,7 +25,7 @@ clear; clc;
 
 % Strecke(n) in Metern [m]
 % Kann ein einzelner Wert oder ein Vektor sein
-s = 0.3;              % Beispiel: 1.4 m
+s = 0.8;              % Beispiel: 1.4 m
 % s = [1, 2, 5, 10, 20];  % Beispiel: mehrere Strecken
 
 % Temperatur in Grad Celsius [°C]

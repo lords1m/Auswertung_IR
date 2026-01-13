@@ -614,26 +614,30 @@ function interactive_plotter()
                 if isnan(min_db), min_db = -60; end
                 cLim = [min_db 0]; 
                 
+                % Custom Colormap: Hell (Weiß) zu Dunkel (Blau)
+                nC = 1024;
+                cmap = [linspace(1, 0, nC)', linspace(1, 0, nC)', linspace(1, 0.5, nC)'];
+                
                 if isCompare
                     data2 = get_heatmap_data(R2.meta.variante, 2);
                     grid2 = calc_heatmap_grid(data2, t_ms, R2.meta.fs, FS_global_ref);
                     
                     axes(ax1);
                     imagesc(grid1);
-                    colormap(ax1, jet); caxis(ax1, cLim); colorbar;
+                    colormap(ax1, cmap); caxis(ax1, cLim); colorbar;
                     title(sprintf('%s (%.1f ms)', strrep(R1.meta.variante,'_',' '), t_ms));
                     axis square; axis off;
                     add_heatmap_labels(grid1, min_db);
                     
                     axes(ax2);
                     imagesc(grid2);
-                    colormap(ax2, jet); caxis(ax2, cLim); colorbar;
+                    colormap(ax2, cmap); caxis(ax2, cLim); colorbar;
                     title(sprintf('%s (%.1f ms)', strrep(R2.meta.variante,'_',' '), t_ms));
                     axis square; axis off;
                     add_heatmap_labels(grid2, min_db);
                 else
                     imagesc(grid1);
-                    colormap(jet); caxis(cLim); colorbar;
+                    colormap(cmap); caxis(cLim); colorbar;
                     title(sprintf('Energieverteilung: %s @ %.1f ms', strrep(R1.meta.variante,'_',' '), t_ms));
                     axis square; axis off;
                     add_heatmap_labels(grid1, min_db);
@@ -891,7 +895,7 @@ function interactive_plotter()
 
         t_min = get(hSliderTime, 'Min');
         t_max = get(hSliderTime, 'Max');
-        step = 0.5; % ms pro Frame
+        step = 1; % ms pro Frame
         
         t_curr = get(hSliderTime, 'Value');
         if t_curr >= t_max - step, t_curr = t_min; end
@@ -901,7 +905,7 @@ function interactive_plotter()
             set(hSliderTime, 'Value', t);
             updatePlot();
             drawnow;
-            pause(0.05);
+            pause(1);
         end
         
         if isPlaying && isvalid(hBtnPlay)
@@ -967,7 +971,8 @@ function interactive_plotter()
                 val = gridData(r,c);
                 lbl = layoutLabels{r,c};
                 if ~isnan(val) && val > threshold
-                    text(c, r, sprintf('%s\n%.0f', lbl, val), ...
+                    val_disp = round(val / 3) * 3;
+                    text(c, r, sprintf('%s\n%.0f', lbl, val_disp), ...
                         'HorizontalAlignment', 'center', 'Color', 'k', 'FontSize', 8, 'FontWeight', 'bold');
                 else
                     text(c, r, lbl, ...

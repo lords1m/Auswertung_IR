@@ -1,5 +1,5 @@
 %% Berechnung_Wandreflexionen.m
-% Berechnet die Laufzeiten der 1. bis 3. Wandreflexion für eine Messposition.
+% Berechnet die Laufzeiten der 1. bis 7. Wandreflexion für eine Messposition.
 %
 % Geometrie:
 % - Quelle bei (0,0,0) [x, y, z] -> [Längs, Höhe, Breite]
@@ -7,36 +7,18 @@
 % - Messpositionen definiert durch x (Längs) und y (Höhe), z=0 (mittig)
 
 clear; clc;
+addpath('functions');
 
 %% 1. Konfiguration
 c = 343.2; % Schallgeschwindigkeit bei 20°C [m/s]
-wall_dist = 0.75; % Abstand zur Wand [m]
+wall_dist = 0.70; % Abstand zur Wand [m]
 width = 2 * wall_dist; % Breite der Schlucht [m]
 
 % Zu analysierende Position (Hier anpassen oder leer lassen für Auswahl)
-target_pos_id = 15; 
+target_pos_id = 14; 
 
-%% 2. Positionen definieren (aus Darstellung_Pegel_ueber_Entfernung.m)
-positions_info = struct();
-% Reihe 1
-positions_info(1).pos = 1;  positions_info(1).x = 0;   positions_info(1).y = 1.2;
-positions_info(2).pos = 2;  positions_info(2).x = 0.3;   positions_info(2).y = 1.2;
-positions_info(3).pos = 3;  positions_info(3).x = 0.6;   positions_info(3).y = 1.2;
-positions_info(4).pos = 4;  positions_info(4).x = 1.2;   positions_info(4).y = 1.2;
-% Reihe 2
-positions_info(5).pos = 5;  positions_info(5).x = 0;   positions_info(5).y = 0.6;
-positions_info(6).pos = 6;  positions_info(6).x = 0.3;   positions_info(6).y = 0.6;
-positions_info(7).pos = 7;  positions_info(7).x = 0.6;   positions_info(7).y = 0.6;
-positions_info(8).pos = 8;  positions_info(8).x = 1.2;   positions_info(8).y = 0.6;
-% Reihe 3
-positions_info(9).pos = 9;   positions_info(9).x = 0;   positions_info(9).y = 0.3;
-positions_info(10).pos = 10; positions_info(10).x = 0.3;  positions_info(10).y = 0.3;
-positions_info(11).pos = 11; positions_info(11).x = 0.6;  positions_info(11).y = 0.3;
-positions_info(12).pos = 12; positions_info(12).x = 1.2;  positions_info(12).y = 0.3;
-% Reihe 4
-positions_info(13).pos = 13; positions_info(13).x = 0.3;  positions_info(13).y = 0;
-positions_info(14).pos = 14; positions_info(14).x = 0.6;  positions_info(14).y = 0;
-positions_info(15).pos = 15; positions_info(15).x = 1.2;  positions_info(15).y = 0;
+%% 2. Positionen definieren
+positions_info = get_geometry();
 
 %% 3. Auswahl der Position
 if isempty(target_pos_id)
@@ -77,7 +59,7 @@ fprintf('  Zeit: %.4f ms\n', t_dir * 1000);
 % n=3: 3. Reflexion (3x Breite Versatz)
 
 fprintf('\nWandreflexionen (Seitlich):\n');
-for n = 1:3
+for n = 1:7
     % Lateraler Versatz der Spiegelquelle
     lat_offset = n * width; 
     
