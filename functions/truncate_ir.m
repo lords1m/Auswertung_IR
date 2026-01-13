@@ -4,16 +4,23 @@ function [ir_trunc, metrics] = truncate_ir(ir, fixed_length_samples)
     
     if nargin < 2, fixed_length_samples = 0; end
     
+    % Input Validierung
+    if isempty(ir) || ~isnumeric(ir)
+        ir_trunc = [];
+        metrics = struct('idx_start',1, 'idx_end',1, 'snr_db',0, 'energy',0, 'energy_total',0, 'energy_share',0, 'original_len',0);
+        return;
+    end
+    
     % DC entfernen
     ir = ir - mean(ir);
     
     N = length(ir);
     ir_abs = abs(ir);
-    max_amp = max(ir_abs);
+    [max_amp, idx_peak] = max(ir_abs);
     
     if max_amp == 0
         ir_trunc = ir;
-        metrics = struct('idx_start',1, 'idx_end',N, 'snr_db',0);
+        metrics = struct('idx_start',1, 'idx_end',N, 'snr_db',0, 'energy',0, 'energy_total',0, 'energy_share',0, 'original_len',N);
         return;
     end
     
@@ -24,16 +31,18 @@ function [ir_trunc, metrics] = truncate_ir(ir, fixed_length_samples)
     mu_noise = mean(noise_section);
     std_noise = std(noise_section);
     
-    % Start finden (1% Schwelle)
-    threshold_start = max_amp * 0.01;
-    idx_start = find(ir_abs > threshold_start, 1, 'first');
+    % Start finden: Rückwärtssuche vom Peak (Robustheit gegen Rauschen am Anfang)
+    threshold_start = max_amp * 0.02;
     
-    if isempty(idx_start)
-        idx_start = 1; 
+    if idx_peak > 1
+        idx_below = find(ir_abs(1:idx_peak) < threshold_start, 1, 'last');
+        if isempty(idx_below), idx_onset = 1; else, idx_onset = idx_below + 1; end
     else
-        % Pre-Roll
-        idx_start = max(1, idx_start - 500);
+        idx_onset = 1;
     end
+    
+    % Pre-Roll (500 Samples)
+    idx_start = max(1, idx_onset - 250);
     
     if fixed_length_samples > 0
         % --- Modus: Feste Länge ---
@@ -52,7 +61,6 @@ function [ir_trunc, metrics] = truncate_ir(ir, fixed_length_samples)
         window_size = 1000;
         if N > window_size, env = movmean(ir_abs, window_size); else, env = ir_abs; end
         
-        [~, idx_peak] = max(env);
         min_silence_samples = 10000; 
         
         if idx_peak < N

@@ -14,7 +14,7 @@ wall_dist = 0.75; % Abstand zur Wand [m]
 width = 2 * wall_dist; % Breite der Schlucht [m]
 
 % Zu analysierende Position (Hier anpassen oder leer lassen für Auswahl)
-target_pos_id = []; 
+target_pos_id = 15; 
 
 %% 2. Positionen definieren (aus Darstellung_Pegel_ueber_Entfernung.m)
 positions_info = struct();

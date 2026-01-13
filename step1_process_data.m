@@ -12,7 +12,7 @@ dataDir = 'dataraw';
 procDir = 'processed';
 fs = 500e3; % Abtastrate
 use_fixed_length = true; % Setze auf true für feste Länge aller IRs
-fixed_duration_s = 0.1;  % Gewünschte Länge in Sekunden (z.B. 0.2s = 100k Samples)
+fixed_duration_s = 0.03;  % Gewünschte Länge in Sekunden (z.B. 0.2s = 100k Samples)
 
 fprintf('=== Step 1: Datenverarbeitung gestartet ===\n');
 fprintf('Konfiguration:\n');

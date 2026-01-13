@@ -23,6 +23,17 @@ function interactive_plotter()
     ySettings(7) = [-60, 0];     % Heatmap (Threshold)
     ySettings(8) = [0, 0.4];     % RT60
 
+    % Default X-Achsen
+    xSettings = containers.Map('KeyType', 'double', 'ValueType', 'any');
+    xSettings(1) = [0, 15];      % Spektrum (Indizes)
+    xSettings(2) = [0, 5];       % IR (ms)
+    xSettings(3) = [0, 5];       % ETC
+    xSettings(4) = [0, 5];       % EDC
+    xSettings(5) = [0, 5];       % Pegel vs Dist
+    xSettings(6) = [0, 2];       % 3D
+    xSettings(7) = [0, 0];       % Heatmap
+    xSettings(8) = [0, 15];      % RT60 (Indizes)
+
     % Referenz laden
     FS_global_ref = 1.0;
     procFiles = dir(fullfile(procDir, 'Proc_*.mat'));
@@ -76,22 +87,27 @@ function interactive_plotter()
                             'String', 'Nur 4 kHz - 63 kHz', 'Value', 1, ...
                             'Callback', @updatePlot);
                             
+    % Achsengrenzen - X-Achse
+    hLblXAxis = uicontrol(pnlControl, 'Style', 'text', 'Position', [10 135 20 15], 'String', 'X:', 'HorizontalAlignment', 'left', 'FontSize', 8);
+    hXMin = uicontrol(pnlControl, 'Style', 'edit', 'Position', [30 135 40 20], 'String', '0', 'Callback', @updatePlot);
+    hXMax = uicontrol(pnlControl, 'Style', 'edit', 'Position', [75 135 40 20], 'String', '100', 'Callback', @updatePlot);
+    hFixedX = uicontrol(pnlControl, 'Style', 'checkbox', 'Position', [120 135 40 20], ...
+                            'String', 'Fix', 'Value', 0, 'Callback', @updatePlot, 'FontSize', 8);
+
+    % Achsengrenzen - Y-Achse
+    hLblYAxis = uicontrol(pnlControl, 'Style', 'text', 'Position', [10 110 20 15], 'String', 'Y:', 'HorizontalAlignment', 'left', 'FontSize', 8);
+    hYMin = uicontrol(pnlControl, 'Style', 'edit', 'Position', [30 110 40 20], 'String', '-30', 'Callback', @updatePlot);
+    hYMax = uicontrol(pnlControl, 'Style', 'edit', 'Position', [75 110 40 20], 'String', '10', 'Callback', @updatePlot);
+    hFixedScale = uicontrol(pnlControl, 'Style', 'checkbox', 'Position', [120 110 40 20], ...
+                            'String', 'Fix', 'Value', 1, 'Callback', @updatePlot, 'FontSize', 8);
+
     % Luftdämpfung Checkbox
-    hShowAirAbs = uicontrol(pnlControl, 'Style', 'checkbox', 'Position', [10 90 200 20], ...
+    hShowAirAbs = uicontrol(pnlControl, 'Style', 'checkbox', 'Position', [10 85 200 20], ...
                             'String', 'Luftdämpfung anzeigen', 'Value', 0, ...
                             'Callback', @updatePlot, 'Visible', 'off');
 
-    % Achsengrenzen - Y-Achse
-    hLblYAxis = uicontrol(pnlControl, 'Style', 'text', 'Position', [10 135 80 15], 'String', 'Y-Achse:', 'HorizontalAlignment', 'left', 'FontSize', 8);
-    hLblYMin = uicontrol(pnlControl, 'Style', 'text', 'Position', [10 115 30 15], 'String', 'Min:', 'HorizontalAlignment', 'left', 'FontSize', 8);
-    hYMin = uicontrol(pnlControl, 'Style', 'edit', 'Position', [40 115 35 20], 'String', '-30', 'Callback', @updatePlot);
-    hLblYMax = uicontrol(pnlControl, 'Style', 'text', 'Position', [80 115 30 15], 'String', 'Max:', 'HorizontalAlignment', 'left', 'FontSize', 8);
-    hYMax = uicontrol(pnlControl, 'Style', 'edit', 'Position', [110 115 35 20], 'String', '10', 'Callback', @updatePlot);
-    hFixedScale = uicontrol(pnlControl, 'Style', 'checkbox', 'Position', [150 115 60 20], ...
-                            'String', 'Fix', 'Value', 1, 'Callback', @updatePlot, 'FontSize', 8);
-
     % Energie-Modus Checkbox (für Pegel über Entfernung)
-    hEnergyMode = uicontrol(pnlControl, 'Style', 'checkbox', 'Position', [10 90 200 20], ...
+    hEnergyMode = uicontrol(pnlControl, 'Style', 'checkbox', 'Position', [10 85 200 20], ...
                             'String', 'Energie (Linear) statt dB', 'Value', 0, ...
                             'Callback', @updatePlot);
 
@@ -103,11 +119,16 @@ function interactive_plotter()
                             'SliderStep', [0.001 0.05], ...
                             'Callback', @updateHeatmapFrame);
 
-    lblThreshold = uicontrol(pnlControl, 'Style', 'text', 'Position', [10 90 50 20], ...
+    lblThreshold = uicontrol(pnlControl, 'Style', 'text', 'Position', [10 85 50 20], ...
                              'String', 'Min dB:', 'Visible', 'off', 'HorizontalAlignment', 'left');
-    hEditThreshold = uicontrol(pnlControl, 'Style', 'edit', 'Position', [65 90 50 20], ...
+    hEditThreshold = uicontrol(pnlControl, 'Style', 'edit', 'Position', [65 85 50 20], ...
                                'String', '-60', 'Visible', 'off', ...
                                'Callback', @updatePlot);
+
+    % Absolute Zeit Checkbox (für IR/ETC)
+    hShowAbsTime = uicontrol(pnlControl, 'Style', 'checkbox', 'Position', [10 60 200 20], ...
+                            'String', 'Absolute Zeit (Raw)', 'Value', 0, ...
+                            'Callback', @updatePlot, 'Visible', 'off');
 
     hBtnPlay = uicontrol(pnlControl, 'Style', 'pushbutton', 'Position', [10 60 200 25], ...
                          'String', 'Play Animation', 'Visible', 'off', ...
@@ -172,15 +193,27 @@ function interactive_plotter()
         newType = hType.Value;
         if newType == lastPlotType, return; end
         
+        % Save current Y
         currMin = str2double(get(hYMin, 'String'));
         currMax = str2double(get(hYMax, 'String'));
         if ~isnan(currMin) && ~isnan(currMax)
             ySettings(lastPlotType) = [currMin, currMax];
         end
         
+        % Save current X
+        currXMin = str2double(get(hXMin, 'String'));
+        currXMax = str2double(get(hXMax, 'String'));
+        if ~isnan(currXMin) && ~isnan(currXMax)
+            xSettings(lastPlotType) = [currXMin, currXMax];
+        end
+        
         newVals = ySettings(newType);
         set(hYMin, 'String', num2str(newVals(1)));
         set(hYMax, 'String', num2str(newVals(2)));
+        
+        newXVals = xSettings(newType);
+        set(hXMin, 'String', num2str(newXVals(1)));
+        set(hXMax, 'String', num2str(newXVals(2)));
         
         lastPlotType = newType;
         updatePlot();
@@ -208,11 +241,16 @@ function interactive_plotter()
         plotType = hType.Value; % 1=Spec, 2=IR, 3=ETC
         useFreqFilter = hFilterFreq.Value;
         useFixedScale = hFixedScale.Value;
+        useFixedX = hFixedX.Value;
         useEnergyMode = hEnergyMode.Value;
 
-        % Achsengrenzen
+        % Achsengrenzen Y
         yMin = str2double(get(hYMin, 'String'));
         yMax = str2double(get(hYMax, 'String'));
+        
+        % Achsengrenzen X
+        xMin = str2double(get(hXMin, 'String'));
+        xMax = str2double(get(hXMax, 'String'));
 
         % Validierung
         if isnan(yMin) || isnan(yMax)
@@ -221,7 +259,14 @@ function interactive_plotter()
             if isnan(yMax), yMax = defaults(2); set(hYMax, 'String', num2str(yMax)); end
         end
         
+        if isnan(xMin) || isnan(xMax)
+            defaultsX = xSettings(plotType);
+            if isnan(xMin), xMin = defaultsX(1); set(hXMin, 'String', num2str(xMin)); end
+            if isnan(xMax), xMax = defaultsX(2); set(hXMax, 'String', num2str(xMax)); end
+        end
+        
         ySettings(plotType) = [yMin, yMax];
+        xSettings(plotType) = [xMin, xMax];
 
         % UI Sichtbarkeit
         if plotType == 7 % Heatmap
@@ -231,13 +276,16 @@ function interactive_plotter()
             set(lblThreshold, 'Visible', 'on');
             set(hEditThreshold, 'Visible', 'on');
             set(hFixedScale, 'Visible', 'off');
+            set(hFixedX, 'Visible', 'off');
             set(hFilterFreq, 'Visible', 'off');
             set(hYMin, 'Visible', 'off');
             set(hYMax, 'Visible', 'off');
+            set(hXMin, 'Visible', 'off');
+            set(hXMax, 'Visible', 'off');
             set(hLblYAxis, 'Visible', 'off');
-            set(hLblYMin, 'Visible', 'off');
-            set(hLblYMax, 'Visible', 'off');
+            set(hLblXAxis, 'Visible', 'off');
             set(hEnergyMode, 'Visible', 'off');
+            set(hShowAbsTime, 'Visible', 'off');
         else
             set(hSliderTime, 'Visible', 'off');
             set(lblTime, 'Visible', 'off');
@@ -245,18 +293,26 @@ function interactive_plotter()
             set(lblThreshold, 'Visible', 'off');
             set(hEditThreshold, 'Visible', 'off');
             set(hFixedScale, 'Visible', 'on');
+            set(hFixedX, 'Visible', 'on');
             set(hFilterFreq, 'Visible', 'on');
             if plotType == 1, set(hShowAirAbs, 'Visible', 'on'); else, set(hShowAirAbs, 'Visible', 'off'); end
             set(hYMin, 'Visible', 'on');
             set(hYMax, 'Visible', 'on');
+            set(hXMin, 'Visible', 'on');
+            set(hXMax, 'Visible', 'on');
             set(hLblYAxis, 'Visible', 'on');
-            set(hLblYMin, 'Visible', 'on');
-            set(hLblYMax, 'Visible', 'on');
+            set(hLblXAxis, 'Visible', 'on');
             
             if plotType == 5 || plotType == 6
                 set(hEnergyMode, 'Visible', 'on');
             else
                 set(hEnergyMode, 'Visible', 'off');
+            end
+            
+            if plotType == 2 || plotType == 3
+                set(hShowAbsTime, 'Visible', 'on');
+            else
+                set(hShowAbsTime, 'Visible', 'off');
             end
         end
 
@@ -306,7 +362,7 @@ function interactive_plotter()
                     grid on; legend show; ylabel('Pegel [dBFS]'); title('Frequenzgang Vergleich');
                     set(gca, 'XTick', x_ticks, 'XTickLabel', x_labels);
                     xtickangle(45);
-                    xlim([0 length(f_sub)+1]);
+                    if useFixedX, xlim([xMin xMax]); else, xlim([0 length(f_sub)+1]); end
                     if useFixedScale
                         ylim([yMin yMax]);
                     end
@@ -318,7 +374,7 @@ function interactive_plotter()
                     title('Differenz (Messung 2 - Messung 1)');
                     set(gca, 'XTick', x_ticks, 'XTickLabel', x_labels);
                     xtickangle(45);
-                    xlim([0 length(f_sub)+1]);
+                    if useFixedX, xlim([xMin xMax]); else, xlim([0 length(f_sub)+1]); end
                     
                     % Luftdämpfung Plotten (Overlay)
                     if hShowAirAbs.Value && isfield(R1, 'info') && isfield(R1.info, 'distance') && R1.info.distance > 0
@@ -345,7 +401,7 @@ function interactive_plotter()
                     title(sprintf('Spektrum: %s (L_{sum} = %.1f dB)', cleanName(name1), R1.freq.sum_level));
                     set(gca, 'XTick', x_ticks, 'XTickLabel', x_labels);
                     xtickangle(45);
-                    xlim([0 length(f_sub)+1]);
+                    if useFixedX, xlim([xMin xMax]); else, xlim([0 length(f_sub)+1]); end
                     if useFixedScale
                         ylim([yMin yMax]);
                     end
@@ -367,10 +423,18 @@ function interactive_plotter()
                 end
 
             case 2 % IMPULSANTWORT (Zeit)
-                t1 = (0:length(R1.time.ir)-1) / R1.meta.fs * 1000; % ms
+                offset1 = 0;
+                if hShowAbsTime.Value && isfield(R1.time.metrics, 'idx_start')
+                    offset1 = (R1.time.metrics.idx_start - 1) / R1.meta.fs * 1000;
+                end
+                t1 = (0:length(R1.time.ir)-1) / R1.meta.fs * 1000 + offset1; % ms
                 
                 if isCompare
-                    t2 = (0:length(R2.time.ir)-1) / R2.meta.fs * 1000;
+                    offset2 = 0;
+                    if hShowAbsTime.Value && isfield(R2.time.metrics, 'idx_start')
+                        offset2 = (R2.time.metrics.idx_start - 1) / R2.meta.fs * 1000;
+                    end
+                    t2 = (0:length(R2.time.ir)-1) / R2.meta.fs * 1000 + offset2;
                     plot(t1, R1.time.ir, 'b', 'DisplayName', cleanName(name1));
                     plot(t2, R2.time.ir, 'r', 'DisplayName', cleanName(name2));
                     legend show;
@@ -391,16 +455,26 @@ function interactive_plotter()
                 if useFixedScale
                     ylim([-FS_global_ref, FS_global_ref] * 1.1);
                 end
+                if useFixedX, xlim([xMin xMax]); end
 
             case 3 % ENERGIE ÜBER ZEIT (ETC)
                 etc1 = 20*log10(abs(R1.time.ir) + eps);
-                t1 = (0:length(etc1)-1) / R1.meta.fs * 1000;
+                
+                offset1 = 0;
+                if hShowAbsTime.Value && isfield(R1.time.metrics, 'idx_start')
+                    offset1 = (R1.time.metrics.idx_start - 1) / R1.meta.fs * 1000;
+                end
+                t1 = (0:length(etc1)-1) / R1.meta.fs * 1000 + offset1;
                 
                 maxVal1 = max(etc1);
                 
                 if isCompare
                     etc2 = 20*log10(abs(R2.time.ir) + eps);
-                    t2 = (0:length(etc2)-1) / R2.meta.fs * 1000;
+                    offset2 = 0;
+                    if hShowAbsTime.Value && isfield(R2.time.metrics, 'idx_start')
+                        offset2 = (R2.time.metrics.idx_start - 1) / R2.meta.fs * 1000;
+                    end
+                    t2 = (0:length(etc2)-1) / R2.meta.fs * 1000 + offset2;
                     maxVal2 = max(etc2);
                     globalMax = max(maxVal1, maxVal2);
                     
@@ -419,6 +493,7 @@ function interactive_plotter()
                 if useFixedScale
                     ylim([yMin yMax]);
                 end
+                if useFixedX, xlim([xMin xMax]); end
 
             case 4 % ENERGY DECAY CURVE (EDC)
                 edc1 = calc_edc(R1.time.ir);
@@ -441,6 +516,7 @@ function interactive_plotter()
                 if useFixedScale
                     ylim([yMin yMax]);
                 end
+                if useFixedX, xlim([xMin xMax]); end
 
             case 5 % PEGEL ÜBER ENTFERNUNG
                 [dist1, lev1, ~] = get_variant_levels(R1.meta.variante, hSource1.Value, useEnergyMode);
@@ -470,6 +546,7 @@ function interactive_plotter()
                 if useFixedScale && ~useEnergyMode
                     ylim([yMin yMax]);
                 end
+                if useFixedX, xlim([xMin xMax]); end
                 
                 text(0.02, 0.05, 'Punkte zeigen Messpositionen 1-15', 'Units', 'normalized', 'FontSize', 8, 'Color', [0.5 0.5 0.5]);
 
@@ -524,6 +601,7 @@ function interactive_plotter()
                 if useFixedScale && ~useEnergyMode
                     zlim([yMin yMax]);
                 end
+                if useFixedX, xlim([xMin xMax]); end
 
             case 7 % HEATMAP (RAUMZEIT)
                 t_ms = get(hSliderTime, 'Value');
@@ -602,7 +680,7 @@ function interactive_plotter()
                 
                 set(gca, 'XTick', x_idx, 'XTickLabel', x_labels);
                 xtickangle(45);
-                xlim([0 length(f_vec)+1]);
+                if useFixedX, xlim([xMin xMax]); else, xlim([0 length(f_vec)+1]); end
                 
                 xlabel('Frequenz [Hz]'); ylabel('Nachhallzeit RT60 [s]');
                 grid on; 
