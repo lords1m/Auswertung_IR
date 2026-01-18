@@ -51,7 +51,7 @@ analyse_modus = 'summenpegel';
 target_frequency = 16000;
 
 % Darstellung
-darstellung_modus = 'energie';
+darstellung_modus = 'leq';
 
 % Referenz
 use_auto_reference = true;
@@ -78,7 +78,7 @@ for v_idx = 1:numel(varianten)
     results(v_idx).positions = [];
     results(v_idx).distances = [];
     results(v_idx).levels = [];
-    results(v_idx).energies = []; % Energie aus Impulsantwort
+    results(v_idx).leq_values = []; % Leq aus Impulsantwort
 
     for p_idx = 1:length(positions_info)
         position = positions_info(p_idx).pos;
@@ -107,19 +107,20 @@ for v_idx = 1:numel(varianten)
                     level = Data.Result.freq.terz_dbfs(freq_idx);
                 end
 
-                energy = NaN;
+                leq_value = NaN;
                 if isfield(Data.Result, 'time') && isfield(Data.Result.time, 'ir')
                     ir = Data.Result.time.ir;
-                    energy = sum(ir.^2);
+                    % Leq calculation: mean of squared signal
+                    leq_value = mean(ir.^2);
                 end
 
                 results(v_idx).positions(end+1) = position;
                 results(v_idx).distances(end+1) = distance;
                 results(v_idx).levels(end+1) = level;
-                results(v_idx).energies(end+1) = energy;
+                results(v_idx).leq_values(end+1) = leq_value;
 
-                if ~isnan(energy)
-                    fprintf('✓ L=%.2f dBFS, E=%.2e\n', level, energy);
+                if ~isnan(leq_value)
+                    fprintf('✓ L=%.2f dBFS, Leq=%.2e\n', level, leq_value);
                 else
                     fprintf('✓ L=%.2f dBFS\n', level);
                 end
@@ -177,44 +178,46 @@ end
 
 L_ideal = L_ref - 20*log10(distance_ideal / r_ref);
 
-%% Energie-Modus
+%% Leq-Modus
 
-if strcmp(darstellung_modus, 'energie')
-    E_ref = NaN;
+if strcmp(darstellung_modus, 'leq')
+    Leq_ref = NaN;
     for v_idx = 1:numel(results)
         idx = find(abs(results(v_idx).distances - r_ref) < 0.01);
         if ~isempty(idx)
-            E_ref = results(v_idx).energies(idx(1));
+            Leq_ref = results(v_idx).leq_values(idx(1));
             break;
         end
     end
 
-    if isnan(E_ref)
+    if isnan(Leq_ref)
         for v_idx = 1:numel(results)
             idx = find(abs(results(v_idx).distances - min_dist) < 0.01);
             if ~isempty(idx)
-                E_ref = results(v_idx).energies(idx(1));
+                Leq_ref = results(v_idx).leq_values(idx(1));
                 break;
             end
         end
     end
 
-    if isnan(E_ref)
-        warning('Keine Referenzenergie, wechsle zu Pegel-Darstellung');
+    if isnan(Leq_ref)
+        warning('Keine Referenz-Leq, wechsle zu Pegel-Darstellung');
         darstellung_modus = 'pegel';
     end
 end
 
-if strcmp(darstellung_modus, 'energie')
-    fprintf('  E_ref = %.2e @ r_ref = %.2f m\n', E_ref, r_ref);
+if strcmp(darstellung_modus, 'leq')
+    fprintf('  Leq_ref = %.2e @ r_ref = %.2f m\n', Leq_ref, r_ref);
 
     for v_idx = 1:numel(results)
-        if ~isempty(results(v_idx).energies)
-            results(v_idx).levels = results(v_idx).energies / E_ref;
+        if ~isempty(results(v_idx).leq_values)
+            % Convert to dB: Leq_dB = 10 * log10(Leq / Leq_ref)
+            results(v_idx).levels = 10 * log10(results(v_idx).leq_values / Leq_ref);
         end
     end
 
-    L_ideal = (r_ref ./ distance_ideal).^2;
+    % Ideal curve in dB: -20*log10(r/r_ref)
+    L_ideal = -20*log10(distance_ideal / r_ref);
 
     all_levels = [];
     for v_idx = 1:numel(results)
@@ -278,13 +281,13 @@ hold off;
 grid on;
 
 xlabel('Entfernung von der Quelle s [m]', 'FontSize', 14, 'FontWeight', 'bold');
-if strcmp(darstellung_modus, 'energie')
+if strcmp(darstellung_modus, 'leq')
     if strcmp(analyse_modus, 'summenpegel')
-        ylabel('Relative Intensität I/I_{ref}', 'FontSize', 14, 'FontWeight', 'bold');
-        title_str = 'Summen-Intensität über Entfernung';
+        ylabel('L_{eq} [dB re. L_{eq,ref}]', 'FontSize', 14, 'FontWeight', 'bold');
+        title_str = 'Äquivalenter Dauerschallpegel L_{eq} über Entfernung';
     else
-        ylabel(sprintf('Relative Intensität I/I_{ref} bei %.0f Hz', target_frequency), 'FontSize', 14, 'FontWeight', 'bold');
-        title_str = sprintf('Intensität (%.0f Hz) über Entfernung', target_frequency);
+        ylabel(sprintf('L_{eq} [dB re. L_{eq,ref}] bei %.0f Hz', target_frequency), 'FontSize', 14, 'FontWeight', 'bold');
+        title_str = sprintf('L_{eq} (%.0f Hz) über Entfernung', target_frequency);
     end
 else
     if strcmp(analyse_modus, 'summenpegel')
@@ -313,11 +316,11 @@ ylim([min(all_levels) - 0.1*y_range, max(all_levels) + 0.1*y_range]);
 fprintf('✓ Standard Plot wurde erstellt.\n');
 
 % Plot speichern
-if strcmp(darstellung_modus, 'energie')
+if strcmp(darstellung_modus, 'leq')
     if strcmp(analyse_modus, 'summenpegel')
-        save_name = 'Summen_Intensitaet_ueber_Entfernung.png';
+        save_name = 'Leq_ueber_Entfernung.png';
     else
-        save_name = sprintf('Intensitaet_%dHz_ueber_Entfernung.png', target_frequency);
+        save_name = sprintf('Leq_%dHz_ueber_Entfernung.png', target_frequency);
     end
 else
     if strcmp(analyse_modus, 'summenpegel')
@@ -362,13 +365,13 @@ plot(distance_ideal, L_ideal, 'k--', 'LineWidth', 3, ...
 hold off;
 grid on;
 xlabel('Entfernung von der Quelle s [m]', 'FontSize', 14, 'FontWeight', 'bold');
-if strcmp(darstellung_modus, 'energie')
+if strcmp(darstellung_modus, 'leq')
     if strcmp(analyse_modus, 'summenpegel')
-        ylabel('Relative Intensität I/I_{ref}', 'FontSize', 14, 'FontWeight', 'bold');
-        title_str_scatter = 'Summen-Intensität über Entfernung (Scatter Plot)';
+        ylabel('L_{eq} [dB re. L_{eq,ref}]', 'FontSize', 14, 'FontWeight', 'bold');
+        title_str_scatter = 'L_{eq} über Entfernung (Scatter Plot)';
     else
-        ylabel(sprintf('Relative Intensität I/I_{ref} bei %.0f Hz', target_frequency), 'FontSize', 14, 'FontWeight', 'bold');
-        title_str_scatter = sprintf('Intensität (%.0f Hz) über Entfernung (Scatter Plot)', target_frequency);
+        ylabel(sprintf('L_{eq} [dB re. L_{eq,ref}] bei %.0f Hz', target_frequency), 'FontSize', 14, 'FontWeight', 'bold');
+        title_str_scatter = sprintf('L_{eq} (%.0f Hz) über Entfernung (Scatter Plot)', target_frequency);
     end
 else
     if strcmp(analyse_modus, 'summenpegel')
@@ -387,11 +390,11 @@ xlim([0, max_dist * 1.1]);
 ylim([min(all_levels) - 0.1*y_range, max(all_levels) + 0.1*y_range]);
 
 % Speichern
-if strcmp(darstellung_modus, 'energie')
+if strcmp(darstellung_modus, 'leq')
     if strcmp(analyse_modus, 'summenpegel')
-        save_name_scatter = 'Summen_Intensitaet_ueber_Entfernung_Scatter.png';
+        save_name_scatter = 'Leq_ueber_Entfernung_Scatter.png';
     else
-        save_name_scatter = sprintf('Intensitaet_%dHz_ueber_Entfernung_Scatter.png', target_frequency);
+        save_name_scatter = sprintf('Leq_%dHz_ueber_Entfernung_Scatter.png', target_frequency);
     end
 else
     if strcmp(analyse_modus, 'summenpegel')
@@ -479,13 +482,13 @@ for v_idx = 1:numel(results)
     hold off;
     grid on;
     xlabel('Entfernung von der Quelle s [m]', 'FontSize', 14, 'FontWeight', 'bold');
-    if strcmp(darstellung_modus, 'energie')
+    if strcmp(darstellung_modus, 'leq')
         if strcmp(analyse_modus, 'summenpegel')
-            ylabel('Relative Intensität I/I_{ref}', 'FontSize', 14, 'FontWeight', 'bold');
-            title_str_2d = sprintf('Summen-Intensität über Entfernung - %s', strrep(results(v_idx).variante, '_', ' '));
+            ylabel('L_{eq} [dB re. L_{eq,ref}]', 'FontSize', 14, 'FontWeight', 'bold');
+            title_str_2d = sprintf('L_{eq} über Entfernung - %s', strrep(results(v_idx).variante, '_', ' '));
         else
-            ylabel(sprintf('Relative Intensität I/I_{ref} bei %.0f Hz', target_frequency), 'FontSize', 14, 'FontWeight', 'bold');
-            title_str_2d = sprintf('Intensität (%.0f Hz) über Entfernung - %s', target_frequency, strrep(results(v_idx).variante, '_', ' '));
+            ylabel(sprintf('L_{eq} [dB re. L_{eq,ref}] bei %.0f Hz', target_frequency), 'FontSize', 14, 'FontWeight', 'bold');
+            title_str_2d = sprintf('L_{eq} (%.0f Hz) über Entfernung - %s', target_frequency, strrep(results(v_idx).variante, '_', ' '));
         end
     else
         if strcmp(analyse_modus, 'summenpegel')
@@ -504,11 +507,11 @@ for v_idx = 1:numel(results)
     ylim([min(all_levels) - 0.1*y_range, max(all_levels) + 0.1*y_range]);
 
     % Speichern
-    if strcmp(darstellung_modus, 'energie')
+    if strcmp(darstellung_modus, 'leq')
         if strcmp(analyse_modus, 'summenpegel')
-            save_name_2d_path = sprintf('Summen_Intensitaet_2D_Pfade_%s.png', results(v_idx).variante);
+            save_name_2d_path = sprintf('Leq_2D_Pfade_%s.png', results(v_idx).variante);
         else
-            save_name_2d_path = sprintf('Intensitaet_%dHz_2D_Pfade_%s.png', target_frequency, results(v_idx).variante);
+            save_name_2d_path = sprintf('Leq_%dHz_2D_Pfade_%s.png', target_frequency, results(v_idx).variante);
         end
     else
         if strcmp(analyse_modus, 'summenpegel')
@@ -581,8 +584,8 @@ if numel(results) == 2
     hold off;
     grid on;
     xlabel('Entfernung von der Quelle s [m]', 'FontSize', 12, 'FontWeight', 'bold');
-    if strcmp(darstellung_modus, 'energie')
-        ylabel('Relative Intensität I/I_{ref}', 'FontSize', 12, 'FontWeight', 'bold');
+    if strcmp(darstellung_modus, 'leq')
+        ylabel('L_{eq} [dB re. L_{eq,ref}]', 'FontSize', 12, 'FontWeight', 'bold');
     else
         ylabel('Summenpegel L [dBFS]', 'FontSize', 12, 'FontWeight', 'bold');
     end
@@ -645,13 +648,8 @@ if numel(results) == 2
         std_diff = std(diff_levels);
         max_diff = max(abs(diff_levels));
 
-        if strcmp(darstellung_modus, 'energie')
-            text_str = sprintf('Mittlere Differenz: %.2e\nStandardabweichung: %.2e\nMax. Differenz: %.2e', ...
-                mean_diff, std_diff, max_diff);
-        else
-            text_str = sprintf('Mittlere Differenz: %.2f dB\nStandardabweichung: %.2f dB\nMax. Differenz: %.2f dB', ...
-                mean_diff, std_diff, max_diff);
-        end
+        text_str = sprintf('Mittlere Differenz: %.2f dB\nStandardabweichung: %.2f dB\nMax. Differenz: %.2f dB', ...
+            mean_diff, std_diff, max_diff);
         text(0.02, 0.98, text_str, 'Units', 'normalized', ...
             'VerticalAlignment', 'top', 'FontSize', 10, ...
             'BackgroundColor', 'w', 'EdgeColor', 'k');
@@ -660,11 +658,7 @@ if numel(results) == 2
     hold off;
     grid on;
     xlabel('Entfernung von der Quelle s [m]', 'FontSize', 12, 'FontWeight', 'bold');
-    if strcmp(darstellung_modus, 'energie')
-        ylabel('Energie-Differenz ΔE/E_{ref}', 'FontSize', 12, 'FontWeight', 'bold');
-    else
-        ylabel('Pegel-Differenz [dB]', 'FontSize', 12, 'FontWeight', 'bold');
-    end
+    ylabel('L_{eq}-Differenz [dB]', 'FontSize', 12, 'FontWeight', 'bold');
     title(sprintf('Differenz: %s minus %s', ...
         strrep(results(1).variante, '_', ' '), ...
         strrep(results(2).variante, '_', ' ')), ...
@@ -676,11 +670,11 @@ if numel(results) == 2
     set(gcf, 'Color', 'w');
 
     % Speichern
-    if strcmp(darstellung_modus, 'energie')
+    if strcmp(darstellung_modus, 'leq')
         if strcmp(analyse_modus, 'summenpegel')
-            save_name_compare = 'Summen_Intensitaet_Vergleich_mit_Differenz.png';
+            save_name_compare = 'Leq_Vergleich_mit_Differenz.png';
         else
-            save_name_compare = sprintf('Intensitaet_%dHz_Vergleich_mit_Differenz.png', target_frequency);
+            save_name_compare = sprintf('Leq_%dHz_Vergleich_mit_Differenz.png', target_frequency);
         end
     else
         if strcmp(analyse_modus, 'summenpegel')
@@ -711,9 +705,10 @@ min_physical_dist = min(0.05, r_ref * 0.1); % 5cm oder 10% der Referenzentfernun
 R_mesh_safe = R_mesh;
 R_mesh_safe(R_mesh_safe < min_physical_dist) = min_physical_dist;
 
-if strcmp(darstellung_modus, 'energie')
-    L_mesh = (r_ref ./ R_mesh_safe).^2;
-    L_source = (r_ref / min_physical_dist)^2;
+if strcmp(darstellung_modus, 'leq')
+    % For Leq in dB: -20*log10(r/r_ref)
+    L_mesh = -20*log10(R_mesh_safe / r_ref);
+    L_source = -20*log10(min_physical_dist / r_ref);
 else
     L_mesh = L_ref - 20*log10(R_mesh_safe / r_ref);
     L_source = L_ref - 20*log10(min_physical_dist / r_ref);
@@ -793,13 +788,13 @@ if numel(results) == 2
     grid on;
     xlabel('x-Position [m]', 'FontSize', 13, 'FontWeight', 'bold');
     ylabel('y-Position [m]', 'FontSize', 13, 'FontWeight', 'bold');
-    if strcmp(darstellung_modus, 'energie')
+    if strcmp(darstellung_modus, 'leq')
         if strcmp(analyse_modus, 'summenpegel')
-            zlabel('Relative Intensität E/E_{ref}', 'FontSize', 13, 'FontWeight', 'bold');
-            title_str_3d_comp = 'Vergleich beider Varianten im Raum - Energie (3D)';
+            zlabel('L_{eq} [dB re. L_{eq,ref}]', 'FontSize', 13, 'FontWeight', 'bold');
+            title_str_3d_comp = 'Vergleich beider Varianten im Raum - L_{eq} (3D)';
         else
-            zlabel(sprintf('Relative Intensität E/E_{ref} bei %.0f Hz', target_frequency), 'FontSize', 13, 'FontWeight', 'bold');
-            title_str_3d_comp = sprintf('Vergleich beider Varianten (%.0f Hz) im Raum - Energie (3D)', target_frequency);
+            zlabel(sprintf('L_{eq} [dB re. L_{eq,ref}] bei %.0f Hz', target_frequency), 'FontSize', 13, 'FontWeight', 'bold');
+            title_str_3d_comp = sprintf('Vergleich beider Varianten (%.0f Hz) im Raum - L_{eq} (3D)', target_frequency);
         end
     else
         if strcmp(analyse_modus, 'summenpegel')
@@ -817,11 +812,11 @@ if numel(results) == 2
     set(gcf, 'Color', 'w');
 
     % Speichern
-    if strcmp(darstellung_modus, 'energie')
+    if strcmp(darstellung_modus, 'leq')
         if strcmp(analyse_modus, 'summenpegel')
-            save_name_3d_comp = 'Summen_Intensitaet_3D_Vergleich_beider_Varianten.png';
+            save_name_3d_comp = 'Leq_3D_Vergleich_beider_Varianten.png';
         else
-            save_name_3d_comp = sprintf('Intensitaet_%dHz_3D_Vergleich_beider_Varianten.png', target_frequency);
+            save_name_3d_comp = sprintf('Leq_%dHz_3D_Vergleich_beider_Varianten.png', target_frequency);
         end
     else
         if strcmp(analyse_modus, 'summenpegel')
@@ -939,13 +934,13 @@ for v_idx = 1:numel(results)
     grid on;
     xlabel('x-Position [m]', 'FontSize', 13, 'FontWeight', 'bold');
     ylabel('y-Position [m]', 'FontSize', 13, 'FontWeight', 'bold');
-    if strcmp(darstellung_modus, 'energie')
+    if strcmp(darstellung_modus, 'leq')
         if strcmp(analyse_modus, 'summenpegel')
-            zlabel('Relative Intensität E/E_{ref}', 'FontSize', 13, 'FontWeight', 'bold');
-            title_str_3d = sprintf('Summen-Intensität im Raum - %s', strrep(results(v_idx).variante, '_', ' '));
+            zlabel('L_{eq} [dB re. L_{eq,ref}]', 'FontSize', 13, 'FontWeight', 'bold');
+            title_str_3d = sprintf('L_{eq} im Raum - %s', strrep(results(v_idx).variante, '_', ' '));
         else
-            zlabel(sprintf('Relative Intensität E/E_{ref} bei %.0f Hz', target_frequency), 'FontSize', 13, 'FontWeight', 'bold');
-            title_str_3d = sprintf('Intensität (%.0f Hz) im Raum - %s', target_frequency, strrep(results(v_idx).variante, '_', ' '));
+            zlabel(sprintf('L_{eq} [dB re. L_{eq,ref}] bei %.0f Hz', target_frequency), 'FontSize', 13, 'FontWeight', 'bold');
+            title_str_3d = sprintf('L_{eq} (%.0f Hz) im Raum - %s', target_frequency, strrep(results(v_idx).variante, '_', ' '));
         end
     else
         if strcmp(analyse_modus, 'summenpegel')
@@ -963,11 +958,11 @@ for v_idx = 1:numel(results)
     set(gcf, 'Color', 'w');
 
     % Speichern
-    if strcmp(darstellung_modus, 'energie')
+    if strcmp(darstellung_modus, 'leq')
         if strcmp(analyse_modus, 'summenpegel')
-            save_name_3d = sprintf('Summen_Intensitaet_3D_%s.png', results(v_idx).variante);
+            save_name_3d = sprintf('Leq_3D_%s.png', results(v_idx).variante);
         else
-            save_name_3d = sprintf('Intensitaet_%dHz_3D_%s.png', target_frequency, results(v_idx).variante);
+            save_name_3d = sprintf('Leq_%dHz_3D_%s.png', target_frequency, results(v_idx).variante);
         end
     else
         if strcmp(analyse_modus, 'summenpegel')

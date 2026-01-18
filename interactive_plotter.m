@@ -446,9 +446,7 @@ function interactive_plotter()
                         plot(t1, R1.time.ir, 'b');
                     end
                     title(['Impulsantwort: ' cleanName(name1)]);
-                    infoStr = sprintf('Truncation: Idx %d bis %d\nEnergieanteil: %.1f%%', ...
-                        R1.time.metrics.idx_start, R1.time.metrics.idx_end, R1.time.metrics.energy_share*100);
-                    text(0.05, 0.9, infoStr, 'Units', 'normalized', 'BackgroundColor', 'w');
+
                 end
                 xlabel('Zeit [ms]'); ylabel('Amplitude');
                 grid on;
@@ -606,40 +604,34 @@ function interactive_plotter()
             case 7 % HEATMAP (RAUMZEIT)
                 t_ms = get(hSliderTime, 'Value');
                 set(lblTime, 'String', sprintf('Zeit: %.1f ms', t_ms));
-                
+
                 data1 = get_heatmap_data(R1.meta.variante, 1);
                 grid1 = calc_heatmap_grid(data1, t_ms, R1.meta.fs, FS_global_ref);
-                
+
                 min_db = str2double(get(hEditThreshold, 'String'));
                 if isnan(min_db), min_db = -60; end
-                cLim = [min_db 0]; 
-                
+                cLim = [min_db 0];
+
                 % Custom Colormap: Hell (Weiß) zu Dunkel (Blau)
                 nC = 1024;
                 cmap = [linspace(1, 0, nC)', linspace(1, 0, nC)', linspace(1, 0.5, nC)'];
-                
+
                 if isCompare
                     data2 = get_heatmap_data(R2.meta.variante, 2);
                     grid2 = calc_heatmap_grid(data2, t_ms, R2.meta.fs, FS_global_ref);
-                    
+
                     axes(ax1);
-                    imagesc(grid1);
-                    colormap(ax1, cmap); caxis(ax1, cLim); colorbar;
+                    draw_patch_heatmap(grid1, cLim, cmap);
                     title(sprintf('%s (%.1f ms)', strrep(R1.meta.variante,'_',' '), t_ms));
-                    axis square; axis off;
                     add_heatmap_labels(grid1, min_db);
-                    
+
                     axes(ax2);
-                    imagesc(grid2);
-                    colormap(ax2, cmap); caxis(ax2, cLim); colorbar;
+                    draw_patch_heatmap(grid2, cLim, cmap);
                     title(sprintf('%s (%.1f ms)', strrep(R2.meta.variante,'_',' '), t_ms));
-                    axis square; axis off;
                     add_heatmap_labels(grid2, min_db);
                 else
-                    imagesc(grid1);
-                    colormap(cmap); caxis(cLim); colorbar;
+                    draw_patch_heatmap(grid1, cLim, cmap);
                     title(sprintf('Energieverteilung: %s @ %.1f ms', strrep(R1.meta.variante,'_',' '), t_ms));
-                    axis square; axis off;
                     add_heatmap_labels(grid1, min_db);
                 end
 
@@ -970,13 +962,18 @@ function interactive_plotter()
             for c = 1:cols
                 val = gridData(r,c);
                 lbl = layoutLabels{r,c};
-                if ~isnan(val) && val > threshold
+                if val > threshold
                     val_disp = round(val / 3) * 3;
+
+                    % Kontrastfarbe: Weiß bei hohen Pegeln (dunkler Hintergrund), Schwarz bei niedrigen
+                    textColor = 'k';
+                    if val > threshold * 0.5, textColor = 'w'; end
+
                     text(c, r, sprintf('%s\n%.0f', lbl, val_disp), ...
-                        'HorizontalAlignment', 'center', 'Color', 'k', 'FontSize', 8, 'FontWeight', 'bold');
+                        'HorizontalAlignment', 'center', 'Color', textColor, 'FontSize', 14, 'FontWeight', 'bold');
                 else
                     text(c, r, lbl, ...
-                        'HorizontalAlignment', 'center', 'Color', [0.5 0.5 0.5], 'FontSize', 8);
+                        'HorizontalAlignment', 'center', 'Color', [0.5 0.5 0.5], 'FontSize', 14);
                 end
             end
         end
@@ -1029,5 +1026,41 @@ function interactive_plotter()
                 if isnumeric(v) && numel(v) > 1000, ir = double(v(:)); return; end
             end
         end
+    end
+
+    function draw_patch_heatmap(gridData, cLim, cmap)
+        % Zeichnet Heatmap mit Patch-Objekten (mit Abständen zwischen Feldern)
+        [rows, cols] = size(gridData);
+
+        % Patch-Objekt für Felder mit Abständen erstellen
+        boxSize = 0.7; % Größe der Felder (0.7 = 30% Lücke)
+        offset = boxSize / 2;
+        vertices = [];
+        faces = [];
+        count = 0;
+
+        % Geometrie erstellen (Zeilenweise)
+        for r = 1:rows
+            for c = 1:cols
+                count = count + 1;
+                % Vertices für Quadrat bei (c,r)
+                v = [c-offset, r-offset; c+offset, r-offset; c+offset, r+offset; c-offset, r+offset];
+                vertices = [vertices; v];
+                faces = [faces; (count-1)*4 + (1:4)];
+            end
+        end
+
+        % Heatmap zeichnen
+        % Faces wurden zeilenweise erstellt, Daten müssen auch zeilenweise linearisiert werden
+        gridDataLinear = reshape(gridData.', 1, []).';
+        patch('Vertices', vertices, 'Faces', faces, ...
+            'FaceVertexCData', gridDataLinear, ...
+            'FaceColor', 'flat', 'EdgeColor', 'none');
+
+        colormap(cmap);
+        caxis(cLim);
+        colorbar;
+        axis ij; axis equal; axis off;
+        xlim([0.5, cols+0.5]); ylim([0.5, rows+0.5]);
     end
 end

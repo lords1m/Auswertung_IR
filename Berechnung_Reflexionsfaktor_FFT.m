@@ -8,7 +8,7 @@
 % 4. Bestimmt den Reflexionsfaktor R(f) unter Berücksichtigung der Weglängen.
 
 clear; clc; close all;
-addpath('functions');
+addpath('functions');^
 
 %% 1. Dateien laden
 fprintf('Bitte wählen Sie die Datei für den DIREKTSCHALL...\n');
