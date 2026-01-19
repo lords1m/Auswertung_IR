@@ -357,7 +357,15 @@ end
 
 if ~isempty(violations)
     % Export Verletzungen als Tabelle
-    T_violations = struct2table(violations);
+    % Konvertiere Cell-Array von Structs zu Struct-Array
+    violations_array = [violations{:}];
+    T_violations = struct2table(violations_array);
+
+    % Erstelle Plots-Verzeichnis falls nicht vorhanden
+    if ~exist('Plots', 'dir')
+        mkdir('Plots');
+    end
+
     writetable(T_violations, 'Plots/dBFS_Violations.xlsx');
     fprintf('\n\n✓ Verletzungen exportiert: Plots/dBFS_Violations.xlsx\n');
 end
