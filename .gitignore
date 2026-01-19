@@ -1,5 +1,30 @@
-*.png
+# MATLAB Dateien
 *.mat
 *.fig
-*.zip
+*.asv
+
+# Export/Output Dateien
+*.png
+*.jpg
+*.jpeg
 *.xlsx
+*.csv
+
+# Video Dateien (zu groß für Git)
+*.mp4
+*.avi
+*.mov
+
+# System Dateien
+.DS_Store
+Thumbs.db
+
+# Archive
+*.zip
+*.tar.gz
+*.rar
+
+# Temporäre Dateien
+*~
+*.swp
+*.swo
