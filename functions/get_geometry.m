@@ -10,10 +10,11 @@ function pos_info = get_geometry()
         13, 0.3, 0; 14, 0.6, 0; 15, 1.2, 0
     ];
 
-    % KORREKTUR: Quelle liegt 0.3m links und 0.3m unterhalb der kleinsten Position
-    % Messpositionen starten bei (0, 0.3) bzw. (0.3, 0), also 0.3m seitlich/höher
-    source_x = -0.3;
-    source_y = -0.3;
+    % Quelle bei Ursprung
+    % Kleinste Receiver-Positionen: Pos_9 bei (0, 0.3) und Pos_13 bei (0.3, 0)
+    % → Minimale Distanz = 0.3m
+    source_x = 0;
+    source_y = 0;
     
     for i = 1:size(coords, 1)
         p = coords(i, 1);
