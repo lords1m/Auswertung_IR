@@ -99,14 +99,19 @@ for i = 1:length(files)
     fprintf('  - IR verarbeitet: %d → %d Samples, SNR: %.2f dB\n', ...
         length(ir_raw), length(ir_trunc), metrics.snr_db);
 
-    % FS_global aus VERARBEITETER IR bestimmen
+    % FS_global nur aus GÜLTIGEN Positionen (1-15) bestimmen!
     ir_max = max(abs(ir_trunc));
-    FS_global = max(FS_global, ir_max);
-    fprintf('  - Max Amplitude (verarbeitet): %.5f\n', ir_max);
+    posNum = str2double(meta.position);
+
+    if ~isnan(posNum) && posNum >= 1 && posNum <= 15
+        FS_global = max(FS_global, ir_max);
+        fprintf('  - Max Amplitude (verarbeitet): %.5f → in FS_global einbezogen\n', ir_max);
+    else
+        fprintf('  - Max Amplitude (verarbeitet): %.5f → NICHT in FS_global (Position außerhalb 1-15)\n', ir_max);
+    end
 
     % Distanz ermitteln
     dist = 0;
-    posNum = str2double(meta.position);
     if ~isnan(posNum)
         idx = find([geo.pos] == posNum);
         if ~isempty(idx)
@@ -224,15 +229,37 @@ if ~isempty(summary_data)
     for i = 1:length(unique_vars)
         v = unique_vars{i};
         fprintf('\nBerechne Durchschnitt für Variante: %s\n', v);
-        mask = strcmp(summary_table.Variante, v) & ~strcmp(summary_table.Position, 'Quelle');
-        subset = summary_table(mask, :);
+
+        % Nur numerische Positionen 1-15 für Average verwenden!
+        % Schließt aus: "Quelle", "Z1", "Z2", "16", etc.
+        mask_var = strcmp(summary_table.Variante, v);
+        mask_valid = false(height(summary_table), 1);
+
+        for j = 1:height(summary_table)
+            if mask_var(j)
+                pos = summary_table.Position{j};
+                posNum = str2double(pos);
+                if ~isnan(posNum) && posNum >= 1 && posNum <= 15
+                    mask_valid(j) = true;
+                end
+            end
+        end
+
+        subset = summary_table(mask_valid, :);
+        total_count = sum(mask_var);
+        excluded_count = total_count - height(subset);
 
         if isempty(subset)
-            fprintf('  [SKIP] Keine Receiver-Positionen gefunden\n');
+            fprintf('  [SKIP] Keine gültigen Receiver-Positionen (1-15) gefunden\n');
             continue;
         end
 
-        fprintf('  - Anzahl Positionen: %d\n', height(subset));
+        fprintf('  - Anzahl Positionen: %d (von %d gesamt, %d ausgeschlossen)\n', ...
+            height(subset), total_count, excluded_count);
+
+        if excluded_count > 0
+            fprintf('  - HINWEIS: Ausgeschlossen %d nicht-numerische/ungültige Positionen\n', excluded_count);
+        end
 
         % Template
         first_file = fullfile(procDir, subset.File{1});
