@@ -1,16 +1,19 @@
 function pos_info = get_geometry()
     % Definiert Positionen im Raum (4x4 Raster)
     pos_info = struct('pos', {}, 'x', {}, 'y', {}, 'distance', {});
-    
-    % Koordinaten-Definition
+
+    % Koordinaten-Definition (Receiver-Positionen)
     coords = [
         1, 0, 1.2; 2, 0.3, 1.2; 3, 0.6, 1.2; 4, 1.2, 1.2;
         5, 0, 0.6; 6, 0.3, 0.6; 7, 0.6, 0.6; 8, 1.2, 0.6;
         9, 0, 0.3; 10, 0.3, 0.3; 11, 0.6, 0.3; 12, 1.2, 0.3;
         13, 0.3, 0; 14, 0.6, 0; 15, 1.2, 0
     ];
-    
-    source_x = 0; source_y = 0;
+
+    % KORREKTUR: Quelle liegt 0.3m links und 0.3m unterhalb der kleinsten Position
+    % Messpositionen starten bei (0, 0.3) bzw. (0.3, 0), also 0.3m seitlich/höher
+    source_x = -0.3;
+    source_y = -0.3;
     
     for i = 1:size(coords, 1)
         p = coords(i, 1);
