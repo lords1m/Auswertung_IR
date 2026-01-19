@@ -25,7 +25,13 @@ function export_all_plots()
 
     % =====================================================================
 
-    addpath('functions');
+    % Repository-Pfade initialisieren (navigiert zum Root)
+if exist('../../functions', 'dir')
+    cd('../../.');
+elseif exist('../functions', 'dir')
+    cd('..');
+end
+addpath('functions');
     procDir = 'processed';
     dataDir = 'data';
     outputDir = 'exported_plots';

@@ -8,7 +8,14 @@
 % 4. Bestimmt den Reflexionsfaktor R(f) unter Berücksichtigung der Weglängen.
 
 clear; clc; close all;
-addpath('functions');^
+
+% Repository-Pfade initialisieren (navigiert zum Root)
+if exist('../../functions', 'dir')
+    cd('../..');
+elseif exist('../functions', 'dir')
+    cd('..');
+end
+addpath('functions');
 
 %% 1. Dateien laden
 fprintf('Bitte wählen Sie die Datei für den DIREKTSCHALL...\n');
@@ -159,5 +166,6 @@ function ir = get_ir_from_struct(D)
         error('Keine IR gefunden');
     end
     ir = double(ir(:));
-    ir = ir - mean(ir); % DC weg
+    % DC-Offset entfernen (zentrale Funktion)
+    ir = process_ir_modifications(ir, 'RemoveDC', true, 'AutoSave', false);
 end

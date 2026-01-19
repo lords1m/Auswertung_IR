@@ -3,8 +3,12 @@
 
 clear; clc; close all;
 
-scriptDir = fileparts(mfilename('fullpath'));
-if ~isempty(scriptDir), cd(scriptDir); end
+% Repository-Pfade initialisieren (navigiert zum Root)
+if exist('../../functions', 'dir')
+    cd('../..');
+elseif exist('../functions', 'dir')
+    cd('..');
+end
 addpath('functions'); 
 
 % Config

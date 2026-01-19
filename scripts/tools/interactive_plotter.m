@@ -2,7 +2,14 @@ function interactive_plotter()
     % GUI zur Analyse und zum Vergleich von Messdaten.
     
     % Config
+    % Repository-Pfade initialisieren (navigiert zum Root)
+    if exist('../../functions', 'dir')
+        cd('../..');
+    elseif exist('../functions', 'dir')
+        cd('..');
+    end
     addpath('functions');
+
     procDir = 'processed';
     dataDir = 'dataraw';
     if ~exist(procDir, 'dir'), errordlg('Ordner "processed" fehlt.', 'Fehler'); return; end
@@ -709,7 +716,8 @@ function interactive_plotter()
             [S, meta] = load_and_parse_file(filepath);
             ir = extract_ir(S);
             if isempty(ir), ir = zeros(100,1); end
-            ir = ir - mean(ir); % DC-Offset entfernen für konsistente Darstellung
+            % DC-Offset entfernen für konsistente Darstellung (zentrale Funktion)
+            ir = process_ir_modifications(ir, 'RemoveDC', true, 'AutoSave', false);
             
             R.time.ir = ir;
             R.time.metrics.idx_start = 1;
@@ -772,7 +780,8 @@ function interactive_plotter()
                     if ~strcmp(meta.variante, variante), continue; end
                     ir = extract_ir(S);
                     if isempty(ir), continue; end
-                    ir = ir - mean(ir);
+                    % DC-Offset entfernen (zentrale Funktion)
+                    ir = process_ir_modifications(ir, 'RemoveDC', true, 'AutoSave', false);
                     fs_loc = 500e3;
                 end
                 

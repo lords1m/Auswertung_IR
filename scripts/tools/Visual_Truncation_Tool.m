@@ -10,9 +10,14 @@ function Visual_Truncation_Tool()
     % - Exportiert die geschnittene IR.
 
     %% Setup & Pfade
-    baseDir = fileparts(mfilename('fullpath'));
-    addpath(fullfile(baseDir, 'functions')); % Falls vorhanden
-    
+    scriptDir = fileparts(mfilename('fullpath'));
+    repoRoot = fileparts(fileparts(scriptDir)); % Zwei Ebenen nach oben
+
+    % Zum Repository-Root wechseln und functions hinzufügen
+    currentDir = pwd;
+    cd(repoRoot);
+    addpath('functions');
+
     % Standard-Verzeichnisse
     dirsToCheck = {'dataraw', 'processed'};
     fileList = {};
@@ -329,7 +334,8 @@ function Visual_Truncation_Tool()
         end
         
         currentIR = double(ir(:));
-        currentIR = currentIR - mean(currentIR); % DC Removal
+        % DC Removal (zentrale Funktion)
+        currentIR = process_ir_modifications(currentIR, 'RemoveDC', true, 'AutoSave', false);
         currentFS = fs;
         currentMeta = meta;
         tVec = (0:length(currentIR)-1) / currentFS * 1000; % ms

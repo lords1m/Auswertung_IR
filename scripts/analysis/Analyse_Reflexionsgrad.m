@@ -25,6 +25,12 @@ center_freq = 40000; % 40 kHz
 
 % Pfade
 procDir = 'processed';
+% Repository-Pfade initialisieren (navigiert zum Root)
+if exist('../../functions', 'dir')
+    cd('../../.');
+elseif exist('../functions', 'dir')
+    cd('..');
+end
 addpath('functions');
 
 %% 1. Positionen definieren (aus Darstellung_Pegel_ueber_Entfernung.m übernommen)

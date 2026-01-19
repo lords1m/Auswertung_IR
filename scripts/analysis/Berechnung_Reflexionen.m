@@ -7,6 +7,12 @@
 % - Messpositionen definiert durch x (Längs) und y (Höhe), z=0 (mittig)
 
 clear; clc;
+% Repository-Pfade initialisieren (navigiert zum Root)
+if exist('../../functions', 'dir')
+    cd('../../.');
+elseif exist('../functions', 'dir')
+    cd('..');
+end
 addpath('functions');
 
 %% 1. Konfiguration
