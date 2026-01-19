@@ -13,15 +13,19 @@ Auswertung_IR/
 ├── dataraw/                      # Rohdaten (.mat Dateien der Messungen)
 ├── processed/                    # Verarbeitete Daten (Result-Structs)
 ├── functions/                    # Zentrale Hilfsfunktionen
+│   ├── process_ir_pipeline.m        # 🆕 Zentrale Verarbeitungs-Pipeline (alle Schritte)
 │   ├── process_ir_modifications.m   # Zentrale IR-Modifikation mit Auto-Save
 │   ├── init_repo_paths.m            # Repository-Pfad-Initialisierung
 │   ├── truncate_ir.m                # IR-Truncation
+│   ├── extract_ir.m                 # IR-Extraktion aus Rohdaten
 │   ├── calc_terz_spectrum.m         # 1/3-Oktavband-Spektrum
 │   ├── calc_rt60_spectrum.m         # Nachhallzeit-Berechnung
+│   ├── IR_PROCESSING_OVERVIEW.md    # 📖 Übersicht aller IR-Verarbeitungsschritte
 │   └── ...weitere Hilfsfunktionen
 ├── scripts/                      # Alle MATLAB Scripts (organisiert)
 │   ├── preprocessing/            # Datenvorverarbeitung
-│   │   └── step1_process_data.m      # Hauptverarbeitung: DC-Removal, Truncation, Spektrum
+│   │   ├── step1_process_data.m            # Hauptverarbeitung: DC-Removal, Truncation, Spektrum
+│   │   └── example_ir_processing_pipeline.m # 🆕 Beispiele für alle Verarbeitungsschritte
 │   ├── analysis/                 # Physikalische Analysen
 │   │   ├── Berechnung_Reflexionsfaktor_FFT.m  # FFT-basierte Reflexionsanalyse
 │   │   ├── Analyse_Reflexionsgrad.m           # Frequenzabhängiger Reflexionsgrad
@@ -141,6 +145,51 @@ FFT-basierte Berechnung des frequenzabhängigen Reflexionsfaktors.
 *   Berücksichtigt Weglängen und Luftdämpfung
 *   Fokus auf Ultraschallbereich (4-63 kHz)
 
+## IR-Verarbeitungs-Pipeline
+
+**NEU:** Alle IR-Verarbeitungsschritte sind jetzt in einer zentralen Pipeline-Funktion verfügbar!
+
+### Schnellstart
+
+```matlab
+% Einfache Verarbeitung (DC-Removal + Truncation)
+[ir_processed, info] = process_ir_pipeline(ir_raw);
+
+% Vollständige Verarbeitung mit Auto-Save
+[ir_final, info] = process_ir_pipeline(ir_raw, ...
+    'RemoveDC', true, ...
+    'Truncate', true, ...
+    'TruncateLength', 15000, ...
+    'Normalize', true, ...
+    'AutoSave', true, ...
+    'SavePath', 'processed/IR_Final.mat');
+```
+
+### Verarbeitungsreihenfolge
+
+Die Pipeline führt alle Schritte in der korrekten Reihenfolge aus:
+
+1. **DC-Offset Entfernung** - Entfernt Gleichspannungsanteil
+2. **Truncation** - Schneidet Start/Ende automatisch
+3. **Normalisierung** *(optional)* - Skaliert auf Max=1
+4. **Windowing** *(optional)* - Hanning/Hamming für FFT
+5. **Filterung** *(optional)* - Bandpass/Lowpass/Highpass
+6. **Auto-Save** *(optional)* - Automatisches Speichern
+
+### Dokumentation
+
+- **Übersicht aller Schritte:** [`functions/IR_PROCESSING_OVERVIEW.md`](functions/IR_PROCESSING_OVERVIEW.md)
+- **Beispiel-Skript:** [`scripts/preprocessing/example_ir_processing_pipeline.m`](scripts/preprocessing/example_ir_processing_pipeline.m)
+- **Pipeline-Funktion:** [`functions/process_ir_pipeline.m`](functions/process_ir_pipeline.m)
+
+Das Beispiel-Skript zeigt:
+- ✅ 5 verschiedene Verarbeitungsszenarien
+- ✅ Schritt-für-Schritt Visualisierung
+- ✅ Manuelle vs. Pipeline-Verarbeitung
+- ✅ Vergleich aller Verarbeitungsschritte
+
+---
+
 ## Technische Details
 
 ### Signalverarbeitung
@@ -236,7 +285,37 @@ Damit die Skripte die Positionen und Varianten korrekt zuordnen können, sollten
 
 ## Changelog & Updates
 
-### 2026-01-19: Repository Refactoring
+### 2026-01-19b: IR-Verarbeitungs-Pipeline
+
+**Neue Features:**
+- 🆕 **Zentrale Pipeline-Funktion:** `process_ir_pipeline()` orchestriert alle IR-Verarbeitungsschritte
+  - DC-Removal, Truncation, Normalisierung, Windowing, Filterung, Auto-Save
+  - Alle Parameter konfigurierbar
+  - Detaillierte Pipeline-Info als Rückgabewert
+- 📖 **Umfassende Dokumentation:** `functions/IR_PROCESSING_OVERVIEW.md`
+  - Alle 7 Verarbeitungsschritte detailliert beschrieben
+  - Verwendungsszenarien und Code-Beispiele
+  - Funktionsreferenz mit Zeilennummern
+- 📝 **Beispiel-Skript:** `example_ir_processing_pipeline.m`
+  - 5 verschiedene Verarbeitungsszenarien
+  - Schritt-für-Schritt Visualisierung
+  - Vergleich: Manuelle vs. Pipeline-Verarbeitung
+
+**Verbesserte Übersichtlichkeit:**
+- Alle IR-Modifikations-Funktionen zentral dokumentiert
+- Klare Verarbeitungsreihenfolge definiert
+- Verwendungszwecke für jede Funktion erklärt
+
+**Verarbeitungsschritte in Reihenfolge:**
+1. Extraktion (`extract_ir`)
+2. DC-Removal (`process_ir_modifications`)
+3. Truncation (`truncate_ir`)
+4. Normalisierung (optional)
+5. Windowing (optional - Hanning/Hamming)
+6. Filterung (optional - Bandpass/Lowpass/Highpass)
+7. Auto-Save (optional)
+
+### 2026-01-19a: Repository Refactoring
 **Strukturverbesserungen:**
 - ✅ **Neue Ordnerstruktur:** Alle Scripts in thematische Unterordner organisiert (`scripts/preprocessing/`, `scripts/analysis/`, `scripts/visualization/`, `scripts/tools/`, `scripts/export/`)
 - ✅ **Zentrale IR-Modifikations-Funktion:** `process_ir_modifications()` ersetzt Code-Duplikate für DC-Removal
