@@ -47,20 +47,35 @@ fprintf('\n--- Phase 1: Ermittle globalen Referenzpegel ---\n');
 fprintf('Anzahl gefundene Dateien: %d\n', length(files));
 
 FS_global = 0;
+source_count = 0;
+receiver_count = 0;
+
 for i = 1:length(files)
     try
         filepath = fullfile(files(i).folder, files(i).name);
-        S = load(filepath);
+        [S, meta] = load_and_parse_file(filepath);  % Parse Metadaten
         ir = extract_ir(S);
+
         if ~isempty(ir)
-             FS_global = max(FS_global, max(abs(ir)));
+            % WICHTIG: Quell-Messungen von FS_global ausschließen!
+            % Quelle darf lauter sein als Empfänger (ist ja die Quelle)
+            if strcmp(meta.type, 'Source')
+                source_count = source_count + 1;
+                % Quelle NICHT in FS_global einbeziehen
+            else
+                receiver_count = receiver_count + 1;
+                FS_global = max(FS_global, max(abs(ir)));
+            end
         end
     catch ME
         fprintf('  [!] Fehler beim Laden von %s: %s\n', files(i).name, ME.message);
     end
 end
+
 if FS_global == 0, FS_global = 1; end
 fprintf('Globaler Referenzpegel (FS_global): %.5f\n', FS_global);
+fprintf('  Berechnet aus: %d Empfänger-Messungen\n', receiver_count);
+fprintf('  Ausgeschlossen: %d Quell-Messungen (dürfen höher sein)\n', source_count);
 
 % Geometrie laden für Distanzberechnung
 fprintf('\n--- Phase 2: Lade Geometriedaten ---\n');
