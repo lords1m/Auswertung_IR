@@ -47,8 +47,8 @@ fprintf('\n--- Phase 1: Ermittle globalen Referenzpegel ---\n');
 fprintf('Anzahl gefundene Dateien: %d\n', length(files));
 
 FS_global = 0;
-source_count = 0;
-receiver_count = 0;
+valid_count = 0;
+skipped_files = 0;
 
 for i = 1:length(files)
     try
@@ -57,25 +57,24 @@ for i = 1:length(files)
         ir = extract_ir(S);
 
         if ~isempty(ir)
-            % WICHTIG: Quell-Messungen von FS_global ausschließen!
-            % Quelle darf lauter sein als Empfänger (ist ja die Quelle)
-            if strcmp(meta.type, 'Source')
-                source_count = source_count + 1;
-                % Quelle NICHT in FS_global einbeziehen
-            else
-                receiver_count = receiver_count + 1;
-                FS_global = max(FS_global, max(abs(ir)));
-            end
+            % Alle Messungen sind Receiver (Szenario B: Keine Quelle)
+            valid_count = valid_count + 1;
+            FS_global = max(FS_global, max(abs(ir)));
+        else
+            skipped_files = skipped_files + 1;
         end
     catch ME
         fprintf('  [!] Fehler beim Laden von %s: %s\n', files(i).name, ME.message);
+        skipped_files = skipped_files + 1;
     end
 end
 
 if FS_global == 0, FS_global = 1; end
 fprintf('Globaler Referenzpegel (FS_global): %.5f\n', FS_global);
-fprintf('  Berechnet aus: %d Empfänger-Messungen\n', receiver_count);
-fprintf('  Ausgeschlossen: %d Quell-Messungen (dürfen höher sein)\n', source_count);
+fprintf('  Berechnet aus: %d Messungen\n', valid_count);
+if skipped_files > 0
+    fprintf('  Übersprungen: %d Dateien (Fehler oder keine IR)\n', skipped_files);
+end
 
 % Geometrie laden für Distanzberechnung
 fprintf('\n--- Phase 2: Lade Geometriedaten ---\n');
@@ -147,23 +146,23 @@ for i = 1:length(files)
     % Save Time
     save(fullfile(dirTime, ['Time_' nameTag '.mat']), 'ir_trunc', 'metrics', 'meta');
     
-    % Distanz ermitteln
+    % Distanz ermitteln (alle Dateien sind Receiver)
     dist = 0;
-    if strcmp(meta.type, 'Receiver')
-        posNum = str2double(meta.position);
-        if ~isnan(posNum)
-            idx = find([geo.pos] == posNum);
-            if ~isempty(idx)
-                dist = geo(idx).distance;
-                fprintf('  - Distanz zur Quelle: %.2f m\n', dist);
-            else
-                fprintf('  - Distanz zur Quelle: Unbekannt (Position nicht in Geometrie)\n');
-            end
+    posNum = str2double(meta.position);
+    if ~isnan(posNum)
+        idx = find([geo.pos] == posNum);
+        if ~isempty(idx)
+            dist = geo(idx).distance;
+            fprintf('  - Distanz zur Quelle: %.2f m\n', dist);
+        else
+            warning('Position %d nicht in Geometrie gefunden! Verfügbare Positionen: %s. dist=0 gesetzt (keine Luftdämpfung).', ...
+                posNum, mat2str([geo.pos]));
+            fprintf('  - Distanz zur Quelle: 0 m [!] Position nicht in Geometrie\n');
         end
     else
-        fprintf('  - Distanz zur Quelle: 0 m (Quellmessung)\n');
+        warning('Position "%s" ist nicht numerisch! dist=0 gesetzt.', meta.position);
+        fprintf('  - Distanz zur Quelle: 0 m [!] Position nicht numerisch\n');
     end
-    % Hinweis: Bei 'Source' (Q1) ist dist=0, also keine Korrektur (korrekt).
 
     % Calc Spectrum
     fprintf('  - Berechne Terzspektrum...\n');
@@ -307,23 +306,20 @@ function [S, meta] = load_and_parse_file(filepath)
     [~, fname, ~] = fileparts(filepath);
     S = load(filepath);
     meta = struct('filename', fname);
-    
+
+    % Erwartetes Format: Variante_X_Pos_Y.mat
+    % Beispiele: Variante_1_Pos_10.mat, Var2_Pos_5.mat
     tokens = regexp(fname, '^(.*?)[_,]Pos[_,]?(\w+)', 'tokens', 'once', 'ignorecase');
     if ~isempty(tokens)
         meta.variante = tokens{1};
-        meta.position = tokens{2};
+        meta.position = tokens{2};  % z.B. "1", "10", "15"
         meta.type = 'Receiver';
     else
-        tokens = regexp(fname, '^(.*?)[_,]Quelle', 'tokens', 'once', 'ignorecase');
-        if ~isempty(tokens)
-            meta.variante = tokens{1};
-            meta.position = 'Q1';
-            meta.type = 'Source';
-        else
-            meta.variante = 'Unknown';
-            meta.position = '0';
-            meta.type = 'Unknown';
-        end
+        % Dateiname passt nicht zum erwarteten Format
+        meta.variante = 'Unknown';
+        meta.position = '0';
+        meta.type = 'Unknown';
+        warning('Dateiname "%s" passt nicht zum erwarteten Format (Variante_X_Pos_Y.mat)', fname);
     end
 end
 
