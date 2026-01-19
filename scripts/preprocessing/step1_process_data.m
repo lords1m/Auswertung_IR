@@ -41,71 +41,37 @@ if ~exist(dirFreq, 'dir')
     mkdir(dirFreq);
 end
 
-% 1. Globale Referenz ermitteln
-files = dir(fullfile(dataDir, '*.mat'));
-fprintf('\n--- Phase 1: Ermittle globalen Referenzpegel ---\n');
-fprintf('Anzahl gefundene Dateien: %d\n', length(files));
-
-FS_global = 0;
-valid_count = 0;
-skipped_files = 0;
-
-for i = 1:length(files)
-    try
-        filepath = fullfile(files(i).folder, files(i).name);
-        [S, meta] = load_and_parse_file(filepath);  % Parse Metadaten
-        ir = extract_ir(S);
-
-        if ~isempty(ir)
-            % Alle Messungen sind Receiver (Szenario B: Keine Quelle)
-            valid_count = valid_count + 1;
-            FS_global = max(FS_global, max(abs(ir)));
-        else
-            skipped_files = skipped_files + 1;
-        end
-    catch ME
-        fprintf('  [!] Fehler beim Laden von %s: %s\n', files(i).name, ME.message);
-        skipped_files = skipped_files + 1;
-    end
-end
-
-if FS_global == 0, FS_global = 1; end
-fprintf('Globaler Referenzpegel (FS_global): %.5f\n', FS_global);
-fprintf('  Berechnet aus: %d Messungen\n', valid_count);
-if skipped_files > 0
-    fprintf('  Übersprungen: %d Dateien (Fehler oder keine IR)\n', skipped_files);
-end
-
-% Geometrie laden für Distanzberechnung
-fprintf('\n--- Phase 2: Lade Geometriedaten ---\n');
+% 1. Geometrie laden
+fprintf('\n--- Phase 1: Lade Geometriedaten ---\n');
 geo = get_geometry();
 fprintf('Geometriedaten geladen: %d Positionen definiert\n', length(geo));
 
-% 2. Verarbeitung
-fprintf('\n--- Phase 3: Verarbeite einzelne Dateien ---\n');
-summary_data = {};
+% 2. Dateien laden und suchen
+files = dir(fullfile(dataDir, '*.mat'));
+fprintf('\n--- Phase 2: Verarbeite IRs und ermittle FS_global ---\n');
+fprintf('Anzahl gefundene Dateien: %d\n', length(files));
+% PASS 1: IRs verarbeiten und FS_global sammeln
+processed_irs = {};
+FS_global = 0;
 processed_count = 0;
-skipped_count = 0; 
+skipped_count = 0;
 
 for i = 1:length(files)
     filepath = fullfile(files(i).folder, files(i).name);
-
-    fprintf('\n[%d/%d] Verarbeite: %s\n', i, length(files), files(i).name);
+    fprintf('\n[%d/%d] Pass 1 - Lade und verarbeite IR: %s\n', i, length(files), files(i).name);
 
     % Parse
     [S, meta] = load_and_parse_file(filepath);
 
     if isempty(S) || isempty(meta.variante)
-        fprintf('  [SKIP] Datei konnte nicht geparst werden oder keine Variante erkannt\n');
+        fprintf('  [SKIP] Datei konnte nicht geparst werden\n');
         skipped_count = skipped_count + 1;
         continue;
     end
 
-    fprintf('  - Variante: %s\n', meta.variante);
-    fprintf('  - Typ: %s\n', meta.type);
-    fprintf('  - Position: %s\n', meta.position);
-    
-    % Umgebungsparameter auslesen (Defaults: 20°C, 50%)
+    fprintf('  - Variante: %s, Position: %s\n', meta.variante, meta.position);
+
+    % Umgebungsparameter auslesen
     T_val = 20;
     LF_val = 50;
     if isfield(S, 'T') && ~isempty(S.T), T_val = mean(S.T); end
@@ -114,7 +80,6 @@ for i = 1:length(files)
     elseif isfield(S, 'LF') && ~isempty(S.LF)
         LF_val = mean(S.LF);
     end
-    fprintf('  - Temperatur: %.1f°C, Luftfeuchte: %.1f%%\n', T_val, LF_val);
 
     % IR Extract
     ir_raw = extract_ir(S);
@@ -123,97 +88,119 @@ for i = 1:length(files)
         skipped_count = skipped_count + 1;
         continue;
     end
-    fprintf('  - Rohdaten extrahiert: %d Samples\n', length(ir_raw));
 
-    % Truncate
+    % Truncate (enthält DC-Removal!)
     target_samples = 0;
     if use_fixed_length
         target_samples = round(fixed_duration_s * fs);
     end
     [ir_trunc, metrics] = truncate_ir(ir_raw, target_samples);
-    
-    fprintf('  - Trunkierte IR: %d Samples (Start: %d, Ende: %d)\n', ...
-        length(ir_trunc), metrics.idx_start, metrics.idx_end);
-    fprintf('  - SNR: %.2f dB\n', metrics.snr_db);
-    
-    % Naming
-    if strcmp(meta.type, 'Source')
-        nameTag = sprintf('%s_Quelle', meta.variante);
-    else
-        nameTag = sprintf('%s_Pos%s', meta.variante, meta.position);
-    end
-    
-    % Save Time
-    save(fullfile(dirTime, ['Time_' nameTag '.mat']), 'ir_trunc', 'metrics', 'meta');
-    
-    % Distanz ermitteln (alle Dateien sind Receiver)
+
+    fprintf('  - IR verarbeitet: %d → %d Samples, SNR: %.2f dB\n', ...
+        length(ir_raw), length(ir_trunc), metrics.snr_db);
+
+    % FS_global aus VERARBEITETER IR bestimmen
+    ir_max = max(abs(ir_trunc));
+    FS_global = max(FS_global, ir_max);
+    fprintf('  - Max Amplitude (verarbeitet): %.5f\n', ir_max);
+
+    % Distanz ermitteln
     dist = 0;
     posNum = str2double(meta.position);
     if ~isnan(posNum)
         idx = find([geo.pos] == posNum);
         if ~isempty(idx)
             dist = geo(idx).distance;
-            fprintf('  - Distanz zur Quelle: %.2f m\n', dist);
         else
-            warning('Position %d nicht in Geometrie gefunden! Verfügbare Positionen: %s. dist=0 gesetzt (keine Luftdämpfung).', ...
-                posNum, mat2str([geo.pos]));
-            fprintf('  - Distanz zur Quelle: 0 m [!] Position nicht in Geometrie\n');
+            warning('Position %d nicht in Geometrie gefunden! dist=0 gesetzt.', posNum);
         end
     else
         warning('Position "%s" ist nicht numerisch! dist=0 gesetzt.', meta.position);
-        fprintf('  - Distanz zur Quelle: 0 m [!] Position nicht numerisch\n');
     end
 
-    % Calc Spectrum
-    fprintf('  - Berechne Terzspektrum...\n');
-    [L_terz, L_sum, f_center] = calc_terz_spectrum(ir_trunc, fs, FS_global, dist, T_val, LF_val);
+    % Naming
+    if strcmp(meta.type, 'Source')
+        nameTag = sprintf('%s_Quelle', meta.variante);
+    else
+        nameTag = sprintf('%s_Pos%s', meta.variante, meta.position);
+    end
+
+    % Save Time Domain (verarbeitete IR)
+    save(fullfile(dirTime, ['Time_' nameTag '.mat']), 'ir_trunc', 'metrics', 'meta');
+
+    % Speichern für Pass 2
+    processed_irs{end+1} = struct(...
+        'filepath', filepath, ...
+        'nameTag', nameTag, ...
+        'meta', meta, ...
+        'ir_trunc', ir_trunc, ...
+        'metrics', metrics, ...
+        'dist', dist, ...
+        'T', T_val, ...
+        'LF', LF_val);
+
+    processed_count = processed_count + 1;
+end
+
+if FS_global == 0, FS_global = 1; end
+
+fprintf('\n--- Phase 2 abgeschlossen ---\n');
+fprintf('Verarbeitet: %d Dateien\n', processed_count);
+fprintf('Übersprungen: %d Dateien\n', skipped_count);
+fprintf('\n*** FS_global (aus verarbeiteten IRs): %.5f ***\n', FS_global);
+
+% PASS 2: Spektren berechnen mit finalem FS_global
+fprintf('\n--- Phase 3: Berechne Spektren mit FS_global ---\n');
+summary_data = {};
+
+for i = 1:length(processed_irs)
+    proc = processed_irs{i};
+    fprintf('\n[%d/%d] Pass 2 - Spektrum berechnen: %s\n', i, length(processed_irs), proc.nameTag);
+
+    % Calc Spectrum mit FINALEM FS_global
+    fprintf('  - Berechne Terzspektrum (FS_global=%.5f)...\n', FS_global);
+    [L_terz, L_sum, f_center] = calc_terz_spectrum(proc.ir_trunc, fs, FS_global, proc.dist, proc.T, proc.LF);
     fprintf('    Summenpegel: %.2f dB FS\n', L_sum);
 
-    % Calc RT60 (T30) mit Umgebungsparametern
+    % Calc RT60 (T30)
     fprintf('  - Berechne Nachhallzeit (T30)...\n');
-    [t30_vals, t30_freqs] = calc_rt60_spectrum(ir_trunc, fs, T_val, LF_val);
-    if ~isempty(t30_vals)
-        fprintf('    T30 Werte berechnet für %d Frequenzbänder\n', length(t30_vals));
-    end
-    
+    [t30_vals, t30_freqs] = calc_rt60_spectrum(proc.ir_trunc, fs, proc.T, proc.LF);
+
     % Save Freq
-    save(fullfile(dirFreq, ['Spec_' nameTag '.mat']), 'L_terz', 'L_sum', 'f_center', 't30_vals', 'meta');
-    
+    save(fullfile(dirFreq, ['Spec_' proc.nameTag '.mat']), 'L_terz', 'L_sum', 'f_center', 't30_vals', 'meta');
+
     % Result Struct
     Result = struct();
-    Result.meta = meta;
+    Result.meta = proc.meta;
     Result.meta.fs = fs;
     Result.meta.FS_global_used = FS_global;
-    Result.meta.T = T_val;
-    Result.meta.LF = LF_val;
-    
-    Result.time.ir = ir_trunc;
-    Result.time.metrics = metrics;
-    
+    Result.meta.T = proc.T;
+    Result.meta.LF = proc.LF;
+
+    Result.time.ir = proc.ir_trunc;
+    Result.time.metrics = proc.metrics;
+
     Result.freq.f_center = f_center;
     Result.freq.terz_dbfs = L_terz;
     Result.freq.sum_level = L_sum;
     Result.freq.t30 = t30_vals;
     Result.freq.t30_freqs = t30_freqs;
-    
+
     % Save Processed
-    if strcmp(meta.type, 'Source')
-        saveName = sprintf('Proc_%s_Quelle.mat', meta.variante);
+    if strcmp(proc.meta.type, 'Source')
+        saveName = sprintf('Proc_%s_Quelle.mat', proc.meta.variante);
     else
-        saveName = sprintf('Proc_%s_Pos%s.mat', meta.variante, meta.position);
+        saveName = sprintf('Proc_%s_Pos%s.mat', proc.meta.variante, proc.meta.position);
     end
 
     save(fullfile(procDir, saveName), 'Result');
     fprintf('  - Gespeichert: %s\n', saveName);
 
-    summary_data(end+1,:) = {meta.variante, meta.position, L_sum, metrics.snr_db, saveName};
-    processed_count = processed_count + 1;
-    fprintf('  [OK] Datei erfolgreich verarbeitet\n');
+    summary_data(end+1,:) = {proc.meta.variante, proc.meta.position, L_sum, proc.metrics.snr_db, saveName};
 end
 
 fprintf('\n--- Phase 3 abgeschlossen ---\n');
-fprintf('Verarbeitet: %d Dateien\n', processed_count);
-fprintf('Übersprungen: %d Dateien\n', skipped_count);
+fprintf('Spektren berechnet: %d Dateien\n', length(processed_irs));
 
 % 3. Summary & Average
 if ~isempty(summary_data)
