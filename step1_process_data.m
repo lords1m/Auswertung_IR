@@ -276,6 +276,65 @@ if ~isempty(summary_data)
     end
 
     fprintf('\n--- Phase 5 abgeschlossen ---\n');
+
+    % Phase 6: Finde globales Maximum aller Summenpegel
+    fprintf('\n--- Phase 6: Ermittle globales Maximum für dBFS-Referenz ---\n');
+    proc_files = dir(fullfile(procDir, 'Proc_*.mat'));
+    fprintf('Anzahl verarbeiteter Dateien: %d\n', length(proc_files));
+
+    L_max_global = -Inf;
+    for i = 1:length(proc_files)
+        D = load(fullfile(procDir, proc_files(i).name));
+        if isfield(D, 'Result') && isfield(D.Result, 'freq') && isfield(D.Result.freq, 'sum_level')
+            L_current = D.Result.freq.sum_level;
+            if isfinite(L_current) && L_current > L_max_global
+                L_max_global = L_current;
+                fprintf('  Neues Maximum: %.2f dBFS in %s\n', L_max_global, proc_files(i).name);
+            end
+        end
+    end
+
+    if ~isfinite(L_max_global)
+        fprintf('  [WARNUNG] Kein gültiges Maximum gefunden! Normalisierung wird übersprungen.\n');
+    else
+        fprintf('  Globales Maximum: %.2f dBFS\n', L_max_global);
+        fprintf('  Dieses wird als 0 dBFS Referenz gesetzt.\n');
+
+        % Phase 7: Re-Normalisierung aller Pegel
+        fprintf('\n--- Phase 7: Normalisiere alle Pegel relativ zum Maximum ---\n');
+        fprintf('Offset: %.2f dB (alle Werte werden um diesen Wert reduziert)\n', L_max_global);
+
+        for i = 1:length(proc_files)
+            filepath = fullfile(procDir, proc_files(i).name);
+            D = load(filepath);
+
+            if isfield(D, 'Result') && isfield(D.Result, 'freq')
+                % Normalisiere Summenpegel
+                if isfield(D.Result.freq, 'sum_level')
+                    D.Result.freq.sum_level = D.Result.freq.sum_level - L_max_global;
+                end
+
+                % Normalisiere Terzpegel
+                if isfield(D.Result.freq, 'terz_dbfs')
+                    D.Result.freq.terz_dbfs = D.Result.freq.terz_dbfs - L_max_global;
+                end
+
+                % Speichere normalisierte Referenz in Metadaten
+                D.Result.meta.dbfs_reference = L_max_global;
+                D.Result.meta.dbfs_normalization_applied = true;
+
+                % Überschreibe Datei
+                Result = D.Result;
+                save(filepath, 'Result');
+
+                fprintf('  [%d/%d] %s normalisiert (neuer Summenpegel: %.2f dBFS)\n', ...
+                    i, length(proc_files), proc_files(i).name, Result.freq.sum_level);
+            end
+        end
+
+        fprintf('\n--- Phase 7 abgeschlossen ---\n');
+        fprintf('Alle Pegel wurden relativ zum Maximum (%.2f dBFS → 0 dBFS) normalisiert.\n', L_max_global);
+    end
 else
     fprintf('\n[!] Keine Daten zum Zusammenfassen vorhanden\n');
 end
