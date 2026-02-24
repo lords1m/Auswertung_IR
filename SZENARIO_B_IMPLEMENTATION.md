@@ -11,9 +11,8 @@ Erstellt: 2026-01-19
 
 → **Szenario B** aus `DC_OFFSET_AND_SOURCE_EXPLAINED.md`
 
----
 
-## ✅ Implementierte Änderungen
+##  Implementierte Änderungen
 
 ### 1. Phase 1: FS_global Berechnung vereinfacht
 
@@ -56,7 +55,6 @@ end
 - Keine unnötigen Unterscheidungen zwischen Source/Receiver
 - Alle Messungen fließen gleichberechtigt in FS_global ein
 
----
 
 ### 2. Phase 3: Distanzberechnung mit Warnungen
 
@@ -104,7 +102,6 @@ end
 - Hilft beim Debuggen von `dist=0` Problemen
 - Erkennt nicht-numerische Positionen (z.B. "Q1", "Unknown")
 
----
 
 ### 3. load_and_parse_file: Source-Erkennung entfernt
 
@@ -146,9 +143,8 @@ end
 - Klarere Fehlermeldung bei falschem Dateinamen-Format
 - Einfacherer Code-Flow
 
----
 
-## 🔍 Was wird jetzt erkannt?
+##  Was wird jetzt erkannt?
 
 ### Erwartete Warnungen
 
@@ -170,7 +166,6 @@ dist=0 gesetzt (keine Luftdämpfung).
 - Option B: Geometrie erweitern (`get_geometry.m`)
 - Option C: Datei ist tatsächlich die Quelle (siehe Szenario C)
 
----
 
 #### Warnung 2: Position nicht numerisch
 ```
@@ -186,7 +181,6 @@ Warning: Position "Q1" ist nicht numerisch! dist=0 gesetzt.
 - Datei prüfen und ggf. umbenennen
 - Oder ist das tatsächlich eine Quell-Datei? (→ Szenario A oder C)
 
----
 
 #### Warnung 3: Dateiname passt nicht zum Format
 ```
@@ -201,14 +195,13 @@ Warning: Dateiname "test.mat" passt nicht zum erwarteten Format (Variante_X_Pos_
 - Datei umbenennen oder aus `dataraw/` entfernen
 - Oder Parsing-Logik anpassen falls anders benannt
 
----
 
-## 🧪 Nächster Test: Diagnostik ausführen
+##  Nächster Test: Diagnostik ausführen
 
 ### Schritt 1: Führen Sie step1_process_data.m aus
 
 ```matlab
-run('scripts/preprocessing/step1_process_data.m')
+run('scripts/00_pipeline/step1_process_data.m')
 ```
 
 **Achten Sie auf:**
@@ -216,19 +209,18 @@ run('scripts/preprocessing/step1_process_data.m')
 - ALLE Dateien sollten Receiver sein
 - Warnungen für Positionen außerhalb 1-15?
 
----
 
 ### Schritt 2: Führen Sie die Diagnostik aus
 
 ```matlab
-run('scripts/preprocessing/diagnose_dbfs_energy.m')
+run('scripts/02_qc_diagnostics/diagnose_dbfs_energy.m')
 ```
 
 **Erwartung für Szenario B:**
 
 #### Falls KEINE Warnungen in Schritt 1:
 → **KEINE Verletzungen** sollten gefunden werden
-→ Problem gelöst! ✅
+→ Problem gelöst! 
 
 #### Falls Warnungen "Position X nicht in Geometrie":
 → Verletzungen bei **genau diesen Positionen** mit `dist=0`
@@ -238,9 +230,8 @@ run('scripts/preprocessing/diagnose_dbfs_energy.m')
 → Anderes Problem (z.B. Resonanzen, Messfehler)
 → Weitere Analyse nötig
 
----
 
-## 📊 Beispiel: Was könnte passiert sein?
+##  Beispiel: Was könnte passiert sein?
 
 ### Hypothese: Position 0 existierte
 
@@ -262,23 +253,22 @@ dist=0 gesetzt (keine Luftdämpfung).
 
 → **Sofort erkennbar** wo das Problem ist!
 
----
 
-## 🎯 Zusammenfassung: Szenario B Lösung
+##  Zusammenfassung: Szenario B Lösung
 
 ### Was wurde geändert?
 
-1. ✅ **Source-Logik entfernt** aus FS_global-Berechnung
-2. ✅ **Vereinfachte Distanzberechnung** (alle sind Receiver)
-3. ✅ **Explizite Warnungen** bei `dist=0` Problemen
-4. ✅ **load_and_parse_file vereinfacht** (keine Quelle-Erkennung)
+1.  **Source-Logik entfernt** aus FS_global-Berechnung
+2.  **Vereinfachte Distanzberechnung** (alle sind Receiver)
+3.  **Explizite Warnungen** bei `dist=0` Problemen
+4.  **load_and_parse_file vereinfacht** (keine Quelle-Erkennung)
 
 ### Was ist jetzt besser?
 
-- 🔍 **Debugging**: Warnungen zeigen sofort wo `dist=0` herkommt
-- 📝 **Klarheit**: Code spiegelt tatsächliche Datenstruktur (nur Receiver)
-- 🐛 **Fehlererkennung**: Positionen außerhalb 1-15 werden erkannt
-- ⚡ **Effizienz**: Weniger unnötige if-else Verzweigungen
+-  **Debugging**: Warnungen zeigen sofort wo `dist=0` herkommt
+-  **Klarheit**: Code spiegelt tatsächliche Datenstruktur (nur Receiver)
+-  **Fehlererkennung**: Positionen außerhalb 1-15 werden erkannt
+-  **Effizienz**: Weniger unnötige if-else Verzweigungen
 
 ### Was müssen Sie tun?
 
@@ -295,16 +285,14 @@ dist=0 gesetzt (keine Luftdämpfung).
    - Oder Geometrie erweitern (falls Position legitim)
    - Oder Dateien entfernen (falls Testdaten)
 
----
 
-## 🔗 Weitere Dokumentation
+##  Weitere Dokumentation
 
 - `DC_OFFSET_AND_SOURCE_EXPLAINED.md` - Vollständige Erklärung aller Szenarien
 - `DBFS_SOLUTION.md` - Ursprüngliche Analyse des dBFS-Problems
 - `IR_PROCESSING_OVERVIEW.md` - Pipeline-Dokumentation
 - `DIAGNOSTIC_README.md` - Anleitung für diagnose_dbfs_energy.m
 
----
 
 *Implementiert: 2026-01-19*
 *Szenario B: Keine Quell-Dateien, nur Receiver-Messungen*

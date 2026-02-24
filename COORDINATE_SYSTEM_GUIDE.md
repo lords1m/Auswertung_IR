@@ -2,13 +2,12 @@
 
 Erstellt: 2026-01-19
 
-## 🎯 Zweck
+##  Zweck
 
 Diese Anleitung erklärt, wie Sie die Koordinaten in `get_geometry.m` an Ihr **tatsächliches Messsetup** anpassen.
 
----
 
-## 📐 Koordinatensystem
+##  Koordinatensystem
 
 ### Achsen-Definition
 
@@ -33,9 +32,8 @@ In Ihrem Setup:
 - **Quelle bei**: (-0.3, -0.3)
 - **Erste Receiver-Position**: (0, 0.3) oder (0.3, 0)
 
----
 
-## 📝 coords Array Struktur
+##  coords Array Struktur
 
 ### Format
 
@@ -75,9 +73,8 @@ coords = [
 - Position 10: 0.3m rechts, 0.3m oben vom Ursprung
 - Position 15: 1.2m rechts, 0.0m oben (auf x-Achse)
 
----
 
-## 🏗️ Wie erstelle ich Koordinaten für mein Setup?
+## ️ Wie erstelle ich Koordinaten für mein Setup?
 
 ### Methode 1: Von physischen Messungen
 
@@ -122,7 +119,6 @@ coords = [
 ];
 ```
 
----
 
 ### Methode 2: Von einem Raster-Setup
 
@@ -176,7 +172,6 @@ Position | x [m] | y [m]
     ...
 ```
 
----
 
 ### Methode 3: Von bestehenden Positionen anpassen
 
@@ -261,9 +256,8 @@ source_y = -0.3;
 - Quelle: (-0.3, -0.3)
 - Distanz: sqrt((0 - (-0.3))² + (0.3 - (-0.3))²) = sqrt(0.3² + 0.6²) = 0.671m
 
----
 
-## 🔢 Distanz-Berechnung
+##  Distanz-Berechnung
 
 ### Formel
 
@@ -304,9 +298,8 @@ distance = sqrt((1 - 1)² + (2 - 1)²)
 
 → Nur vertikaler Abstand!
 
----
 
-## 📍 Position der Quelle festlegen
+##  Position der Quelle festlegen
 
 ### Variante 1: Quelle im Ursprung (einfach)
 
@@ -321,7 +314,6 @@ source_y = 0;
 
 **Vorteil:** Intuitiv, einfache Koordinaten
 
----
 
 ### Variante 2: Quelle an beliebiger Position
 
@@ -337,7 +329,6 @@ source_y = -0.3;
 
 **Vorteil:** Flexibel, passt zu bestehendem Setup
 
----
 
 ### Variante 3: Quelle in der Mitte
 
@@ -352,9 +343,8 @@ source_y = y_center;
 
 **Vorteil:** Symmetrisch, für zentrale Quelle
 
----
 
-## 🛠️ Praktisches Beispiel: Ihr aktuelles Setup
+## ️ Praktisches Beispiel: Ihr aktuelles Setup
 
 ### Gegebene Information
 
@@ -402,9 +392,8 @@ source_x = -0.3;  % 0.3m links von kleinster x-Koordinate
 source_y = -0.3;  % 0.3m unter kleinster y-Koordinate
 ```
 
----
 
-## ✅ Checkliste: Koordinaten überprüfen
+##  Checkliste: Koordinaten überprüfen
 
 ### 1. Physisches Setup dokumentieren
 
@@ -460,9 +449,8 @@ axis equal;
 - Quelle (roter Stern) an der richtigen Position
 - Abstände visuell plausibel
 
----
 
-## 🚨 Häufige Fehler
+##  Häufige Fehler
 
 ### Fehler 1: Vertauschte Achsen
 
@@ -478,7 +466,6 @@ coords = [
     1, 0.0, 1.2;  % RICHTIG: [Position, x, y]
 ```
 
----
 
 ### Fehler 2: Einheiten falsch
 
@@ -494,7 +481,6 @@ coords = [
     1, 0.30, 1.20;  % RICHTIG: Meter
 ```
 
----
 
 ### Fehler 3: Position-Nummern nicht eindeutig
 
@@ -512,7 +498,6 @@ coords = [
     2, 0.3, 1.2;  % RICHTIG: Eindeutige Nummern
 ```
 
----
 
 ### Fehler 4: Quelle falsch positioniert
 
@@ -530,9 +515,8 @@ source_x = min(coords(:, 2)) - 0.3;  % Links von kleinster x-Position
 source_y = min(coords(:, 3)) - 0.3;  % Unter kleinster y-Position
 ```
 
----
 
-## 📚 Zusammenfassung
+##  Zusammenfassung
 
 ### Koordinaten erstellen:
 
@@ -544,13 +528,12 @@ source_y = min(coords(:, 3)) - 0.3;  % Unter kleinster y-Position
 
 ### Wichtige Regeln:
 
-✅ **Einheit:** Immer Meter [m]
-✅ **Format:** [Position_Nr, x, y]
-✅ **Achsen:** x = seitlich, y = höhe
-✅ **Distanz:** Wird automatisch berechnet
-✅ **Eindeutig:** Jede Position-Nr nur einmal
+ **Einheit:** Immer Meter [m]
+ **Format:** [Position_Nr, x, y]
+ **Achsen:** x = seitlich, y = höhe
+ **Distanz:** Wird automatisch berechnet
+ **Eindeutig:** Jede Position-Nr nur einmal
 
----
 
 *Erstellt: 2026-01-19*
 *Für: Anpassung von get_geometry.m an tatsächliches Messsetup*

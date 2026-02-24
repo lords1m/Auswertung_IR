@@ -1,10 +1,10 @@
 # Positive dBFS-Werte: Ursache und Lösungen
 
-## 🔍 Das Problem
+##  Das Problem
 
 In manchen Plots erscheinen **positive dBFS-Werte** (z.B. +2 dBFS, +5 dBFS), obwohl `FS_global` als das globale Maximum aller Impulsantworten definiert ist. Per Definition sollte dBFS (decibels relative to Full Scale) **niemals positiv** sein.
 
-## ⚙️ Ursache
+## ️ Ursache
 
 ### Schritt 1: FS_global wird berechnet (step1_process_data.m)
 
@@ -18,7 +18,6 @@ end
 
 **Ergebnis:** `FS_global` = Maximum aller **unkorrigierten** Impulsantworten
 
----
 
 ### Schritt 2: Terzspektrum-Berechnung (calc_terz_spectrum.m)
 
@@ -41,9 +40,8 @@ L_dBFS(k) = 10 * log10(band_energy / (FS_global^2 + eps));
 - Nach der Verstärkung kann `band_energy > FS_global^2` sein
 - Dann wird `log10(band_energy / FS_global^2) > 0` → **Positive dBFS!**
 
----
 
-## 📊 Beispiel
+##  Beispiel
 
 ```
 Gegeben:
@@ -64,30 +62,29 @@ dBFS-Berechnung:
 - L_dBFS = 10 * log10(0.7²/0.64)
          = 10 * log10(0.49/0.64)
          = 10 * log10(0.765)
-         = -1.16 dB  ✓ Negativ
+         = -1.16 dB   Negativ
 
 ABER: Wenn band_energy_corrected = 0.85² = 0.7225 (nach starker Korrektur):
 - L_dBFS = 10 * log10(0.7225/0.64)
          = 10 * log10(1.129)
-         = +0.53 dB  ✗ POSITIV!
+         = +0.53 dB   POSITIV!
 ```
 
----
 
-## 🔧 Lösungen
+##  Lösungen
 
-### **Lösung 1: FS_global aus korrigierten IRs berechnen** ⭐ EMPFOHLEN
+### **Lösung 1: FS_global aus korrigierten IRs berechnen**  EMPFOHLEN
 
 **Konzept:** Berechne `FS_global` aus den **luftdämpfungs-korrigierten** IRs.
 
 **Vorteile:**
-- ✅ Physikalisch korrekt
-- ✅ dBFS-Werte bleiben ≤ 0 dB
-- ✅ Referenz ist das "verstärkte" Signal
+-  Physikalisch korrekt
+-  dBFS-Werte bleiben ≤ 0 dB
+-  Referenz ist das "verstärkte" Signal
 
 **Nachteile:**
-- ⚠️ Erfordert Änderung in step1_process_data.m
-- ⚠️ FS_global wird größer (mehr Verstärkung)
+- ️ Erfordert Änderung in step1_process_data.m
+- ️ FS_global wird größer (mehr Verstärkung)
 
 **Implementation:**
 
@@ -118,22 +115,21 @@ for i = 1:length(files)
 end
 ```
 
-**Test:** Führe `scripts/preprocessing/fix_dbfs_issue.m` aus, um den korrekten Wert zu ermitteln.
+**Test:** Führe `scripts/02_qc_diagnostics/fix_dbfs_issue.m` aus, um den korrekten Wert zu ermitteln.
 
----
 
 ### **Lösung 2: Keine Luftdämpfungskorrektur in calc_terz_spectrum**
 
 **Konzept:** Entferne die Luftdämpfungskorrektur komplett.
 
 **Vorteile:**
-- ✅ Einfach
-- ✅ FS_global bleibt gültig
-- ✅ dBFS-Werte bleiben ≤ 0 dB
+-  Einfach
+-  FS_global bleibt gültig
+-  dBFS-Werte bleiben ≤ 0 dB
 
 **Nachteile:**
-- ⚠️ Spektrum zeigt gedämpfte Werte (nicht korrigiert)
-- ⚠️ Physikalisch weniger aussagekräftig
+- ️ Spektrum zeigt gedämpfte Werte (nicht korrigiert)
+- ️ Physikalisch weniger aussagekräftig
 
 **Implementation:**
 
@@ -147,20 +143,19 @@ Entferne in `calc_terz_spectrum.m` die Zeilen 33-40:
 % end
 ```
 
----
 
 ### **Lösung 3: Clip dBFS-Werte auf 0 dB**
 
 **Konzept:** Begrenze alle dBFS-Werte auf maximal 0 dB.
 
 **Vorteile:**
-- ✅ Sehr einfach
-- ✅ Keine Änderungen am Workflow
+-  Sehr einfach
+-  Keine Änderungen am Workflow
 
 **Nachteile:**
-- ⚠️ Versteckt das Problem nur
-- ⚠️ Informationsverlust (echte Werte werden abgeschnitten)
-- ⚠️ Physikalisch nicht korrekt
+- ️ Versteckt das Problem nur
+- ️ Informationsverlust (echte Werte werden abgeschnitten)
+- ️ Physikalisch nicht korrekt
 
 **Implementation:**
 
@@ -173,7 +168,6 @@ L_dBFS(k) = min(0, 10 * log10(band_energy / (FS_global^2 + eps)));
 
 **Nicht empfohlen**, da es das Problem nur versteckt.
 
----
 
 ### **Lösung 4: Separate Referenz für korrigierte Spektren**
 
@@ -182,12 +176,12 @@ L_dBFS(k) = min(0, 10 * log10(band_energy / (FS_global^2 + eps)));
 - `FS_global_corrected` für korrigierte Spektren
 
 **Vorteile:**
-- ✅ Beide Referenzen verfügbar
-- ✅ Flexibel
+-  Beide Referenzen verfügbar
+-  Flexibel
 
 **Nachteile:**
-- ⚠️ Komplexer
-- ⚠️ Mehr Variablen zu verwalten
+- ️ Komplexer
+- ️ Mehr Variablen zu verwalten
 
 **Implementation:**
 
@@ -212,30 +206,28 @@ end
 % In calc_terz_spectrum: Verwende FS_global_corrected
 ```
 
----
 
-## 🎯 Empfehlung
+##  Empfehlung
 
 **Verwende Lösung 1: FS_global aus korrigierten IRs berechnen**
 
 **Begründung:**
-1. ✅ **Physikalisch korrekt**: FS_global repräsentiert das tatsächlich verwendete Maximum
-2. ✅ **Keine Informationsverlust**: Alle Werte bleiben korrekt
-3. ✅ **Konsistent**: dBFS-Werte sind immer ≤ 0 dB
-4. ✅ **Transparent**: Nutzer versteht die Referenz
+1.  **Physikalisch korrekt**: FS_global repräsentiert das tatsächlich verwendete Maximum
+2.  **Keine Informationsverlust**: Alle Werte bleiben korrekt
+3.  **Konsistent**: dBFS-Werte sind immer ≤ 0 dB
+4.  **Transparent**: Nutzer versteht die Referenz
 
 **Nächster Schritt:**
 ```bash
 # 1. Teste aktuelles Problem
-run('scripts/preprocessing/fix_dbfs_issue.m')
+run('scripts/02_qc_diagnostics/fix_dbfs_issue.m')
 
 # 2. Notiere FS_global_corrected Wert
 # 3. Update step1_process_data.m mit Lösung 1
 ```
 
----
 
-## 📚 Hintergrund: Was ist dBFS?
+##  Hintergrund: Was ist dBFS?
 
 **dBFS = decibels relative to Full Scale**
 
@@ -250,9 +242,8 @@ run('scripts/preprocessing/fix_dbfs_issue.m')
 - Im digitalen System würde das Clipping verursachen
 - dBFS > 0 ist ein konzeptioneller Fehler
 
----
 
-## 🔬 Weiterführende Informationen
+##  Weiterführende Informationen
 
 ### Luftdämpfung bei Ultraschall (40 kHz, 3m Distanz)
 
@@ -271,7 +262,6 @@ run('scripts/preprocessing/fix_dbfs_issue.m')
 - Mit Korrektur: Spektrum zeigt "was an der Quelle war"
 - Wichtig für physikalische Analysen (Reflexion, Absorption, etc.)
 
----
 
 *Erstellt: 2026-01-19*
 *Autor: IR Processing Documentation*

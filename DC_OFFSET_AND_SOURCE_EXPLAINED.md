@@ -2,13 +2,12 @@
 
 Erstellt: 2026-01-19
 
-## 🎯 Zusammenfassung
+##  Zusammenfassung
 
 Dieses Dokument beantwortet zwei zentrale Fragen:
 1. **Was ist DC-Offset?** (Ihre ursprüngliche Frage)
 2. **Warum wird "Quelle" verarbeitet, wenn es keine Quelldaten gibt?**
 
----
 
 ## 1. DC-Offset: Technische Erklärung
 
@@ -110,7 +109,6 @@ Für akustische Impulsantworten gibt es keinen legitimen DC-Anteil:
 
 **Ausnahme:** Wenn Sie bewusst eine DC-Komponente messen (z.B. statischer Druck), aber das ist hier nicht der Fall.
 
----
 
 ## 2. Quell-Messungen: Warum existiert dieser Code?
 
@@ -166,7 +164,6 @@ dataraw/
 
 **→ Code ist korrekt, Source-Logik notwendig**
 
----
 
 #### Szenario B: Es gibt KEINE Quell-Dateien
 
@@ -200,7 +197,6 @@ Die Dateien mit `dist=0` sind entweder:
 
 **→ Code ist übervorsichtig, Source-Logik kann entfernt werden**
 
----
 
 #### Szenario C: Position 0 existiert (aber ist kein "Quelle")
 
@@ -219,7 +215,6 @@ dataraw/
 
 **→ Geometrie muss erweitert werden, oder Pos_0 ist tatsächlich die Quelle**
 
----
 
 ## 3. Wie finden Sie heraus, welches Szenario zutrifft?
 
@@ -276,7 +271,6 @@ fprintf('\n');
 - Gibt es Dateien mit Positionen außerhalb 1-15?
 - Gibt es eine Position 0?
 
----
 
 ## 4. Empfohlene Aktionen
 
@@ -286,7 +280,6 @@ fprintf('\n');
 
 Die Änderung in `step1_process_data.m` (Quelle von FS_global ausschließen) ist korrekt!
 
----
 
 ### Falls Szenario B (Keine Quelle):
 
@@ -324,7 +317,6 @@ end
 
 → Hilft beim Debuggen
 
----
 
 ### Falls Szenario C (Position 0 ist die Quelle):
 
@@ -375,7 +367,6 @@ else
 end
 ```
 
----
 
 ## 5. Diagnostik-Workflow
 
@@ -403,7 +394,7 @@ end
 ### Schritt 3: Führen Sie die Energie-Diagnostik aus
 
 ```matlab
-run('scripts/preprocessing/diagnose_dbfs_energy.m')
+run('scripts/02_qc_diagnostics/diagnose_dbfs_energy.m')
 
 % Prüfen Sie die Ausgabe:
 % - Anzahl Verletzungen: ___
@@ -420,19 +411,18 @@ run('scripts/preprocessing/diagnose_dbfs_energy.m')
 | Pos_0 existiert | C | Geometrie erweitern |
 | Verletzungen bei dist>0 | Problem! | Resonanzen oder andere Ursache |
 
----
 
 ## 6. Zusammenfassung & Empfehlung
 
 ### DC-Offset
 
-✅ **Wird korrekt entfernt** in `truncate_ir.m` Zeile 15
-✅ **Immer notwendig** für korrekte Energie- und Spektral-Analyse
-✅ **Keine Änderung nötig**
+ **Wird korrekt entfernt** in `truncate_ir.m` Zeile 15
+ **Immer notwendig** für korrekte Energie- und Spektral-Analyse
+ **Keine Änderung nötig**
 
 ### Source-Verarbeitung
 
-❓ **Unklarer Status** - hängt von Ihren Daten ab
+ **Unklarer Status** - hängt von Ihren Daten ab
 
 **Empfohlene Schritte:**
 1. Prüfen Sie Ihre `dataraw/` Dateien
@@ -452,31 +442,29 @@ run('scripts/preprocessing/diagnose_dbfs_energy.m')
 - Führt zu `dBFS > 0 dB`
 
 **Lösung:**
-- ✅ Bereits implementiert in `step1_process_data.m` Zeilen 60-67
+-  Bereits implementiert in `step1_process_data.m` Zeilen 60-67
 - Source-Messungen von `FS_global` Berechnung ausschließen
 - Nur Receiver bestimmen Referenzpegel
 
 **Verifizierung:**
 ```matlab
 % Führen Sie erneut aus:
-run('scripts/preprocessing/step1_process_data.m')
-run('scripts/preprocessing/diagnose_dbfs_energy.m')
+run('scripts/00_pipeline/step1_process_data.m')
+run('scripts/02_qc_diagnostics/diagnose_dbfs_energy.m')
 
 % Erwartung:
 % - Keine Verletzungen bei Receiver-Messungen
 % - Eventuell noch Verletzungen bei Source (ist OK!)
 ```
 
----
 
-## 📚 Weitere Dokumentation
+##  Weitere Dokumentation
 
 - `IR_PROCESSING_OVERVIEW.md` - Vollständige Pipeline-Dokumentation
 - `DBFS_SOLUTION.md` - Detaillierte Erklärung des dBFS-Problems
 - `AIR_ABSORPTION_IMPACT.md` - Luftdämpfungs-Quantifizierung
 - `DIAGNOSTIC_README.md` - Anleitung für Diagnostik-Script
 
----
 
 *Erstellt: 2026-01-19*
 *Beantwortet: DC-Offset Erklärung + Source-Verarbeitungs-Logik*

@@ -50,9 +50,9 @@ function val = get_rms_db(dataMap, key, idx_start, win_samp, FS_global_ref)
 
             if eff_start <= eff_end
                 seg = ir(eff_start:eff_end);
-                % RMS im Fenster
-                rms_val = sqrt(sum(seg.^2) / win_samp);
-                val = 20*log10((rms_val + eps) / FS_global_ref);
+                % Energie im Fenster (dBFS wie in calc_terz_spectrum)
+                energy_val = sum(seg.^2);
+                val = 10*log10((energy_val + eps) / (FS_global_ref^2));
             else
                 val = -100;
             end

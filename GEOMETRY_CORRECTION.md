@@ -2,21 +2,19 @@
 
 Erstellt: 2026-01-19
 
-## 🎯 Problem
+##  Problem
 
 Die Messpositionen starten **0.3m seitlich und 0.3m höher** als die Quelle.
 Die bisherige Annahme (Quelle bei 0, 0) war **FALSCH**!
 
----
 
-## ✅ Lösung
+##  Lösung
 
 **Alte Quell-Position:** `(0, 0)`
 **Neue Quell-Position:** `(-0.3, -0.3)`
 
----
 
-## 📊 Distanz-Änderungen
+##  Distanz-Änderungen
 
 ### Alte Geometrie (Quelle bei 0, 0):
 
@@ -30,17 +28,16 @@ Die bisherige Annahme (Quelle bei 0, 0) war **FALSCH**!
 | 6        | 0.3   | 0.6   | 0.671           |
 | 7        | 0.6   | 0.6   | 0.849           |
 | 8        | 1.2   | 0.6   | 1.342           |
-| **9**    | **0.0** | **0.3** | **0.300** ⚠️ |
+| **9**    | **0.0** | **0.3** | **0.300** ️ |
 | 10       | 0.3   | 0.3   | 0.424           |
 | 11       | 0.6   | 0.3   | 0.671           |
 | 12       | 1.2   | 0.3   | 1.237           |
-| **13**   | **0.3** | **0.0** | **0.300** ⚠️ |
+| **13**   | **0.3** | **0.0** | **0.300** ️ |
 | 14       | 0.6   | 0.0   | 0.600           |
 | 15       | 1.2   | 0.0   | 1.200           |
 
 **Kleinste Distanz:** 0.300 m (Position 9 und 13)
 
----
 
 ### Neue Geometrie (Quelle bei -0.3, -0.3):
 
@@ -54,11 +51,11 @@ Die bisherige Annahme (Quelle bei 0, 0) war **FALSCH**!
 | 6        | 0.3   | 0.6   | **1.001**       | +0.330        |
 | 7        | 0.6   | 0.6   | **1.179**       | +0.330        |
 | 8        | 1.2   | 0.6   | **1.671**       | +0.329        |
-| **9**    | **0.0** | **0.3** | **0.671** ✅  | **+0.371**    |
+| **9**    | **0.0** | **0.3** | **0.671**   | **+0.371**    |
 | 10       | 0.3   | 0.3   | **0.849**       | +0.425        |
 | 11       | 0.6   | 0.3   | **1.001**       | +0.330        |
 | 12       | 1.2   | 0.3   | **1.565**       | +0.328        |
-| **13**   | **0.3** | **0.0** | **0.671** ✅  | **+0.371**    |
+| **13**   | **0.3** | **0.0** | **0.671**   | **+0.371**    |
 | 14       | 0.6   | 0.0   | **0.900**       | +0.300        |
 | 15       | 1.2   | 0.0   | **1.530**       | +0.330        |
 
@@ -66,9 +63,8 @@ Die bisherige Annahme (Quelle bei 0, 0) war **FALSCH**!
 
 → **+123% Erhöhung** der minimalen Distanz! (0.3m → 0.671m)
 
----
 
-## 🔬 Auswirkung auf Luftdämpfungs-Korrektur
+##  Auswirkung auf Luftdämpfungs-Korrektur
 
 ### Prinzip der Luftdämpfung
 
@@ -91,9 +87,8 @@ Dämpfungskoeffizient α ≈ 1.6 dB/m
 
 → **Stärkere Korrektur** → Höhere band_energy nach Korrektur!
 
----
 
-## 🚨 Auswirkung auf dBFS-Problem
+##  Auswirkung auf dBFS-Problem
 
 ### Vorher (falsche Distanzen):
 
@@ -104,7 +99,7 @@ Luftdämpfung:       -0.48 dB
 Korrektur:          ×1.056 (schwach)
 Signal (korr):      niedrig × 1.056 = immer noch niedrig
 band_energy:        niedrig
-dBFS:               negativ ✓
+dBFS:               negativ 
 ```
 
 ### Nachher (korrekte Distanzen):
@@ -116,14 +111,13 @@ Luftdämpfung:       -1.07 dB
 Korrektur:          ×1.132 (STÄRKER!)
 Signal (korr):      niedrig × 1.132 = HÖHER
 band_energy:        HÖHER (+7.2%)
-dBFS:               KANN positiv werden! ⚠️
+dBFS:               KANN positiv werden! ️
 ```
 
 **ABER:** Wenn FS_global ebenfalls mit den **neuen Distanzen** berechnet wird, sollte es konsistent sein!
 
----
 
-## 🔍 Warum war das ein Problem?
+##  Warum war das ein Problem?
 
 ### Hypothese 1: Inkonsistente Distanzen
 
@@ -143,9 +137,8 @@ dBFS:               KANN positiv werden! ⚠️
 - Aber Pos_0 hatte die ursprünglichen (unkorrigierten) hohen Werte
 - → Positive dBFS bei diesen Dateien!
 
----
 
-## 🎯 Was ändert sich jetzt?
+##  Was ändert sich jetzt?
 
 ### In get_geometry.m
 
@@ -181,14 +174,13 @@ Jetzt mit **korrekten Distanzen**:
 - Position 13: dist=0.671m statt 0.300m
 - → **Mehr Korrektur** bei allen Positionen!
 
----
 
-## 🧪 Nächste Schritte
+##  Nächste Schritte
 
 ### 1. Daten neu verarbeiten
 
 ```matlab
-run('scripts/preprocessing/step1_process_data.m')
+run('scripts/00_pipeline/step1_process_data.m')
 ```
 
 **Erwartung:**
@@ -199,14 +191,14 @@ run('scripts/preprocessing/step1_process_data.m')
 ### 2. Diagnostik ausführen
 
 ```matlab
-run('scripts/preprocessing/diagnose_dbfs_energy.m')
+run('scripts/02_qc_diagnostics/diagnose_dbfs_energy.m')
 ```
 
 **Erwartung:**
 
 #### Falls konsistent:
 → **KEINE Verletzungen** mehr!
-→ Problem gelöst ✅
+→ Problem gelöst 
 
 #### Falls inkonsistent:
 → Verletzungen bleiben oder verschlimmern sich
@@ -221,16 +213,15 @@ Führen Sie die Verarbeitung einmal mit alten Distanzen und einmal mit neuen aus
 copyfile('processed/Summary.xlsx', 'processed/Summary_ALT.xlsx');
 
 % Verarbeiten Sie neu mit korrigierten Distanzen:
-run('scripts/preprocessing/step1_process_data.m')
+run('scripts/00_pipeline/step1_process_data.m')
 
 % Vergleichen Sie:
 old = readtable('processed/Summary_ALT.xlsx');
 new = readtable('processed/Summary.xlsx');
 ```
 
----
 
-## 📐 Visualisierung
+##  Visualisierung
 
 ### ALT (Quelle bei 0, 0):
 
@@ -247,7 +238,6 @@ y ^
 
 **Nächste Position:** Pos_9 bei (0, 0.3) → **0.300m**
 
----
 
 ### NEU (Quelle bei -0.3, -0.3):
 
@@ -269,9 +259,8 @@ y ^
 
 → Die Quelle ist jetzt "links-unten" von allen Messpositionen!
 
----
 
-## 🔢 Mathematische Verifikation
+##  Mathematische Verifikation
 
 **Position 9: (0, 0.3)**
 
@@ -286,7 +275,7 @@ d = sqrt((0 - (-0.3))² + (0.3 - (-0.3))²)
   = sqrt(0.3² + 0.6²)
   = sqrt(0.09 + 0.36)
   = sqrt(0.45)
-  = 0.671 m ✓
+  = 0.671 m 
 ```
 
 **Position 10: (0.3, 0.3)**
@@ -301,7 +290,7 @@ NEU:
 d = sqrt((0.3 + 0.3)² + (0.3 + 0.3)²)
   = sqrt(0.6² + 0.6²)
   = sqrt(0.72)
-  = 0.849 m ✓
+  = 0.849 m 
 ```
 
 **Position 4: (1.2, 1.2)** (weiteste Position)
@@ -315,14 +304,13 @@ d = sqrt(1.2² + 1.2²)
 NEU:
 d = sqrt(1.5² + 1.5²)
   = sqrt(4.5)
-  = 2.121 m ✓
+  = 2.121 m 
 ```
 
 → **Alle Distanzen** werden größer (ca. +0.3 bis +0.42 m)!
 
----
 
-## 📊 Erwartete Änderungen in den Ergebnissen
+##  Erwartete Änderungen in den Ergebnissen
 
 ### Terzband-Spektren
 
@@ -343,35 +331,33 @@ d = sqrt(1.5² + 1.5²)
 **Erwartung:**
 - Wenig Änderung (T30 ist unabhängig von absoluten Pegeln)
 
----
 
-## ✅ Zusammenfassung
+##  Zusammenfassung
 
 ### Was wurde geändert?
 
-1. ✅ **get_geometry.m**: Quell-Position von (0, 0) auf (-0.3, -0.3)
-2. ✅ **Alle Distanzen**: Erhöht um ~0.3-0.42 m
-3. ✅ **Luftdämpfungs-Korrektur**: Stärker bei allen Positionen
+1.  **get_geometry.m**: Quell-Position von (0, 0) auf (-0.3, -0.3)
+2.  **Alle Distanzen**: Erhöht um ~0.3-0.42 m
+3.  **Luftdämpfungs-Korrektur**: Stärker bei allen Positionen
 
 ### Was muss noch getan werden?
 
-1. 🔄 **Daten neu verarbeiten** mit step1_process_data.m
-2. 🔍 **Diagnostik ausführen** mit diagnose_dbfs_energy.m
-3. 📊 **Ergebnisse vergleichen** (ALT vs. NEU)
+1.  **Daten neu verarbeiten** mit step1_process_data.m
+2.  **Diagnostik ausführen** mit diagnose_dbfs_energy.m
+3.  **Ergebnisse vergleichen** (ALT vs. NEU)
 
 ### Erwartetes Resultat?
 
-🎯 **Falls korrekt:**
+ **Falls korrekt:**
 - Keine positiven dBFS-Werte mehr (oder deutlich weniger)
 - Konsistente Energie-Verteilung
 - Physikalisch plausible Ergebnisse
 
-⚠️ **Falls Problem bleibt:**
+️ **Falls Problem bleibt:**
 - Andere Root Cause (z.B. Resonanzen, Messfehler)
 - Inkonsistente alte Daten
 - Weitere Analyse nötig
 
----
 
 *Korrigiert: 2026-01-19*
 *Quelle verschoben: (0, 0) → (-0.3, -0.3)*

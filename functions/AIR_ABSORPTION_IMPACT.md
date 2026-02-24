@@ -1,6 +1,6 @@
 # Luftdämpfung bei Ultraschall: Quantifizierung und Auswirkungen
 
-## 📊 Luftdämpfungs-Koeffizienten (T=20°C, 50% relative Luftfeuchte)
+##  Luftdämpfungs-Koeffizienten (T=20°C, 50% relative Luftfeuchte)
 
 Basierend auf ISO 9613-1 und experimentellen Daten für Ultraschall:
 
@@ -19,7 +19,7 @@ Basierend auf ISO 9613-1 und experimentellen Daten für Ultraschall:
 | 50 kHz   | **0.17** | 0.2 dB | 0.3 dB | **0.5 dB** |
 | 63 kHz   | **0.27** | 0.3 dB | 0.5 dB | **0.8 dB** |
 
-## 🎯 Realistische Werte aus Ihrer Anwendung
+##  Realistische Werte aus Ihrer Anwendung
 
 In Ihrer Akustik-Auswertung (Ultraschall-RIR) sind die Dämpfungswerte durch **mehrfache Reflexionen und längere Laufwege** deutlich höher:
 
@@ -50,9 +50,9 @@ In Ihrer Akustik-Auswertung (Ultraschall-RIR) sind die Dämpfungswerte durch **m
 - Dämpfung bei 40 kHz: 1.7 - 5.5 dB
 - Dämpfung bei 63 kHz: **4.1 - 13.5 dB**
 - Korrektur-Faktor bei 63 kHz: ×1.60 - ×4.73
-- **Auswirkung: SIGNIFIKANT** ⚠️
+- **Auswirkung: SIGNIFIKANT** ️
 
-## ⚠️ Warum entstehen trotzdem positive dBFS?
+## ️ Warum entstehen trotzdem positive dBFS?
 
 Obwohl die Luftdämpfung bei kurzen Distanzen (< 3m) **relativ gering** ist, können positive dBFS-Werte trotzdem auftreten durch:
 
@@ -96,7 +96,7 @@ Bei bestimmten Frequenzen kann Raumresonanz die Amplitude erhöhen:
 - Nach Luftdämpfungs-Korrektur: noch höher
 - Kann `FS_global` übersteigen
 
-## 📈 Konkrete Beispiel-Rechnung
+##  Konkrete Beispiel-Rechnung
 
 ### Szenario: Ihr typischer Messaufbau
 
@@ -128,7 +128,7 @@ L_dBFS = 10 × log10(E_corr / FS_global²)
        = 10 × log10(0.00278 / 0.85²)
        = 10 × log10(0.00278 / 0.7225)
        = 10 × log10(0.00385)
-       = -24.1 dB  ✓ Negativ (OK)
+       = -24.1 dB   Negativ (OK)
 ```
 
 **ABER:** Wenn durch Resonanz oder Messfehler `E_corr` höher ist:
@@ -137,10 +137,10 @@ E_corr_resonance = 0.75  (lokales Maximum durch Resonanz)
 
 L_dBFS = 10 × log10(0.75 / 0.7225)
        = 10 × log10(1.038)
-       = +0.16 dB  ✗ POSITIV!
+       = +0.16 dB   POSITIV!
 ```
 
-## 🔍 Ihre tatsächlichen Werte
+##  Ihre tatsächlichen Werte
 
 ### Analyse Ihrer airabsorb.m Funktion
 
@@ -172,16 +172,16 @@ Bei Ihren typischen Distanzen (0.3m - 3m) und Frequenzen (4-63 kHz):
 
 → Bei 3m und 63 kHz: Signal wird um **9.5%** verstärkt
 
-## ⚡ Wann wird es kritisch?
+##  Wann wird es kritisch?
 
 ### Kritische Bedingung für positive dBFS:
 
 ```
 band_energy_corrected > FS_global²
 
-⟺  band_energy_raw × (A_lin)² > FS_global²
+  band_energy_raw × (A_lin)² > FS_global²
 
-⟺  band_energy_raw > FS_global² / (A_lin)²
+  band_energy_raw > FS_global² / (A_lin)²
 ```
 
 **Beispiel bei 63 kHz, 3m:**
@@ -200,7 +200,7 @@ Da `band_energy` typisch zwischen 0.001 - 0.5 liegt (je nach Frequenzband), ist 
 - Hochenergetischen Frequenzbändern
 - Nahen Messungen mit hoher Amplitude
 
-## 💡 Lösung: Korrigiertes FS_global
+##  Lösung: Korrigiertes FS_global
 
 ### Option 1: FS_global aus korrigierten IRs
 
@@ -232,7 +232,7 @@ Result.meta.FS_global_corrected = FS_global_corr; % Für Spektrum
 
 → Flexibel, aber komplexer
 
-## 📊 Zusammenfassung
+##  Zusammenfassung
 
 | Aspekt | Wert |
 |--------|------|
@@ -242,11 +242,11 @@ Result.meta.FS_global_corrected = FS_global_corr; % Für Spektrum
 | **Häufigkeit positiver dBFS** | Gelegentlich (5-10% der Fälle) |
 | **Lösung** | FS_global aus korrigierten IRs |
 
-## 🎯 Empfehlung
+##  Empfehlung
 
 **Implementiere Lösung 1** (FS_global aus korrigierten IRs):
 
-1. Führe `scripts/preprocessing/fix_dbfs_issue.m` aus
+1. Führe `scripts/02_qc_diagnostics/fix_dbfs_issue.m` aus
 2. Notiere `FS_global_corrected` Wert
 3. Update `step1_process_data.m` um Korrektur in Phase 1 anzuwenden
 4. Verifiziere: Keine positiven dBFS mehr!
@@ -257,7 +257,6 @@ FS_global_raw:       0.8
 FS_global_corrected: 0.85 - 0.88 (ca. +6% höher)
 ```
 
----
 
 *Erstellt: 2026-01-19*
 *Basierend auf ISO 9613-1 und experimentellen Ultraschall-Daten*

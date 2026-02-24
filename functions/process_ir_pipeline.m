@@ -209,6 +209,11 @@ function [ir_out, pipeline_info] = process_ir_pipeline(ir_in, varargin)
 
         % Filter-Design
         if strcmp(opts.FilterType, 'bandpass')
+            if mod(opts.FilterOrder, 2) ~= 0
+                warning('process_ir_pipeline:FilterOrderOdd', ...
+                        'Bandpass-Filterorder muss gerade sein, runde auf %d', opts.FilterOrder + 1);
+                opts.FilterOrder = opts.FilterOrder + 1;
+            end
             [b, a] = butter(opts.FilterOrder/2, Wn, 'bandpass');
         else
             [b, a] = butter(opts.FilterOrder, Wn, opts.FilterType);
@@ -246,7 +251,10 @@ function [ir_out, pipeline_info] = process_ir_pipeline(ir_in, varargin)
             if exist(opts.SavePath, 'file')
                 data = load(opts.SavePath);
                 if isfield(data, 'Result')
-                    data.Result.ir = ir_out;
+                    if ~isfield(data.Result, 'time')
+                        data.Result.time = struct();
+                    end
+                    data.Result.time.ir = ir_out;
                     data.Result.last_modified = datetime('now');
                     data.Result.pipeline_info = pipeline_info;
                     Result = data.Result;
@@ -298,7 +306,8 @@ end
 %% Hilfsfunktion: Result-Struct erstellen
 function Result = create_result_struct(ir, info)
     Result = struct();
-    Result.ir = ir;
+    Result.time = struct();
+    Result.time.ir = ir;
     Result.pipeline_info = info;
     Result.created = datetime('now');
     Result.last_modified = datetime('now');

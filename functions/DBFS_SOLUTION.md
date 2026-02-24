@@ -1,11 +1,11 @@
 # Lösung: Positive dBFS-Werte - Quell-Messungen vs. Empfänger
 
-## 🎯 Problem-Diagnose: GELÖST
+##  Problem-Diagnose: GELÖST
 
 ### Diagnostik-Ergebnisse:
 
 ```
-⚠️  28 VERLETZUNGEN gefunden!
+️  28 VERLETZUNGEN gefunden!
 
 Verletzungen pro Frequenzband:
 Frequenz     | Anzahl
@@ -20,9 +20,8 @@ Maximale Verletzung: +6.58 dB (Ratio 4.5×)
 Betroffene Distanzen: ALLE bei 0.00 m → QUELL-MESSUNGEN!
 ```
 
----
 
-## 💡 Ursache (GEFUNDEN):
+##  Ursache (GEFUNDEN):
 
 ### **Quelle vs. Empfänger - Unterschiedliche Spektren**
 
@@ -57,13 +56,12 @@ Quelle Pos13:
 | **10 kHz Energie** | Gedämpft | Sehr hoch (Grundfrequenz) |
 
 → **Zeitbereich**: Empfänger > Quelle
-→ **10 kHz Band**: Quelle > Empfänger ✗
+→ **10 kHz Band**: Quelle > Empfänger 
 
----
 
-## ✅ Lösung: Quelle von FS_global ausschließen
+##  Lösung: Quelle von FS_global ausschließen
 
-### **Implementiert in:** `scripts/preprocessing/step1_process_data.m`
+### **Implementiert in:** `scripts/00_pipeline/step1_process_data.m`
 
 **Code-Änderung:**
 
@@ -93,13 +91,12 @@ fprintf('Ausgeschlossen: %d Quell-Messungen\n', source_count);
 ```
 
 **Effekt:**
-- ✅ `FS_global` basiert nur auf **Empfänger-Messungen**
-- ✅ Empfänger: **Keine positiven dBFS** mehr
-- ⚠️ Quelle: **Kann positive dBFS haben** (aber das ist OK!)
+-  `FS_global` basiert nur auf **Empfänger-Messungen**
+-  Empfänger: **Keine positiven dBFS** mehr
+- ️ Quelle: **Kann positive dBFS haben** (aber das ist OK!)
 
----
 
-## 🎓 Warum ist das korrekt?
+##  Warum ist das korrekt?
 
 ### **Physikalische Argumentation:**
 
@@ -131,19 +128,18 @@ Es wäre falsch, die Referenz vom Quell-Mikrofon zu nehmen:
 
 → **Richtig:** Referenz aus Empfängern, Quelle darf höher sein
 
----
 
-## 📊 Erwartete Ergebnisse nach Änderung:
+##  Erwartete Ergebnisse nach Änderung:
 
 ### **Vor der Änderung:**
 
 ```
 FS_global: 126.24 (aus allen Messungen)
 
-Empfänger Pos1: -15.3 dBFS ✓
-Empfänger Pos5: -22.1 dBFS ✓
+Empfänger Pos1: -15.3 dBFS 
+Empfänger Pos5: -22.1 dBFS 
 ...
-Quelle Pos13 bei 10 kHz: +6.58 dBFS ✗ (Verletzung!)
+Quelle Pos13 bei 10 kHz: +6.58 dBFS  (Verletzung!)
 ```
 
 ### **Nach der Änderung:**
@@ -153,26 +149,25 @@ FS_global: XXX.XX (nur aus Empfängern)
   Berechnet aus: 44 Empfänger-Messungen
   Ausgeschlossen: 4 Quell-Messungen
 
-Empfänger Pos1: -15.3 dBFS ✓
-Empfänger Pos5: -22.1 dBFS ✓
+Empfänger Pos1: -15.3 dBFS 
+Empfänger Pos5: -22.1 dBFS 
 ...
 Quelle Pos13 bei 10 kHz: +Y.Y dBFS (OK - ist die Quelle!)
 ```
 
 **Wichtig:**
-- ✅ **Empfänger:** Alle dBFS ≤ 0 dB
-- ⚠️ **Quelle:** Kann positive dBFS haben
-- 📊 **Interpretation:** Quelle ist Y.Y dB lauter als lautester Empfänger
+-  **Empfänger:** Alle dBFS ≤ 0 dB
+- ️ **Quelle:** Kann positive dBFS haben
+-  **Interpretation:** Quelle ist Y.Y dB lauter als lautester Empfänger
 
----
 
-## 🔬 Validierung:
+##  Validierung:
 
 ### **Test nach Implementierung:**
 
 1. **Führe step1_process_data.m aus:**
    ```matlab
-   run('scripts/preprocessing/step1_process_data.m')
+   run('scripts/00_pipeline/step1_process_data.m')
    ```
 
 2. **Prüfe Ausgabe:**
@@ -185,7 +180,7 @@ Quelle Pos13 bei 10 kHz: +Y.Y dBFS (OK - ist die Quelle!)
 
 3. **Führe Diagnostik erneut aus:**
    ```matlab
-   run('scripts/preprocessing/diagnose_dbfs_energy.m')
+   run('scripts/02_qc_diagnostics/diagnose_dbfs_energy.m')
    ```
 
 4. **Erwartetes Ergebnis:**
@@ -193,9 +188,8 @@ Quelle Pos13 bei 10 kHz: +Y.Y dBFS (OK - ist die Quelle!)
    - KEINE Verletzungen bei Empfängern (dist>0)
    - Oder deutlich weniger Verletzungen gesamt
 
----
 
-## 📋 Alternative: Quelle komplett ignorieren?
+##  Alternative: Quelle komplett ignorieren?
 
 **Frage:** Sollten Quell-Messungen überhaupt Terz-Spektren bekommen?
 
@@ -220,22 +214,20 @@ end
 
 Wenn Sie Quelle nicht brauchen: **Option B** verwenden
 
----
 
-## 📚 Zusammenfassung:
+##  Zusammenfassung:
 
 | Aspekt | Lösung |
 |--------|--------|
 | **Problem** | Quelle hat bei 10 kHz mehr Energie als Empfänger |
 | **Ursache** | Sender-Charakteristik + schmalbandiges Spektrum |
 | **Code-Änderung** | FS_global nur aus Empfängern berechnen |
-| **Empfänger** | Keine positiven dBFS mehr ✓ |
+| **Empfänger** | Keine positiven dBFS mehr  |
 | **Quelle** | Kann positive dBFS haben (OK!) |
 | **Interpretation** | Quelle ist X dB lauter als Empfänger-Max |
 
-**Status:** ✅ **GELÖST**
+**Status:**  **GELÖST**
 
----
 
 *Erstellt: 2026-01-19*
 *Basierend auf Diagnostik-Ergebnissen: 28 Verletzungen, alle bei dist=0*

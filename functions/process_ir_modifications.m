@@ -84,7 +84,10 @@ function ir_out = process_ir_modifications(ir_in, varargin)
 
                 % Update IR im Result struct (falls vorhanden)
                 if isfield(data, varName) && isstruct(data.(varName))
-                    data.(varName).ir = ir_out;
+                    if ~isfield(data.(varName), 'time')
+                        data.(varName).time = struct();
+                    end
+                    data.(varName).time.ir = ir_out;
 
                     % Update Timestamp
                     data.(varName).last_modified = datetime('now');
@@ -103,7 +106,8 @@ function ir_out = process_ir_modifications(ir_in, varargin)
             else
                 % Neue Datei erstellen
                 Result = struct();
-                Result.ir = ir_out;
+                Result.time = struct();
+                Result.time.ir = ir_out;
                 Result.created = datetime('now');
                 Result.last_modified = datetime('now');
 

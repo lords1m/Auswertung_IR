@@ -2,9 +2,8 @@
 
 Dieses Dokument beschreibt alle Funktionen, die eine Impulsantwort (IR) direkt verändern, in der Reihenfolge, in der sie typischerweise angewendet werden.
 
----
 
-## 📋 Verarbeitungsreihenfolge
+##  Verarbeitungsreihenfolge
 
 ```
 Rohdaten (.mat)
@@ -26,9 +25,8 @@ Verarbeitete IR
 [7] Auto-Save             → Speichert in .mat (process_ir_modifications)
 ```
 
----
 
-## 🔧 Detaillierte Beschreibung der Schritte
+##  Detaillierte Beschreibung der Schritte
 
 ### 1. IR-Extraktion
 
@@ -52,7 +50,6 @@ ir_raw = extract_ir(S);
 
 **Änderungen an IR:** Konvertiert zu double, macht Spaltenvektor
 
----
 
 ### 2. DC-Offset Entfernung
 
@@ -94,7 +91,6 @@ ir_clean = process_ir_modifications(ir_raw, ...
 
 **Integriert in:** `truncate_ir()` (wird automatisch aufgerufen)
 
----
 
 ### 3. Truncation (Zuschneiden)
 
@@ -137,7 +133,6 @@ ir_clean = process_ir_modifications(ir_raw, ...
 - Schneidet Start/Ende
 - Optional: Zero-Padding bei fester Länge
 
----
 
 ### 4. Normalisierung (Optional)
 
@@ -173,7 +168,6 @@ fprintf('Faktor: %.6f\n', info.normalization_factor);
 - Vor FFT-Analysen
 - Export für andere Software
 
----
 
 ### 5. Windowing (Optional)
 
@@ -203,7 +197,7 @@ fprintf('Faktor: %.6f\n', info.normalization_factor);
 **Ort:**
 - Direkt: MATLAB built-in `hanning(N)`
 - Pipeline: `functions/process_ir_pipeline.m` (Schritt 4)
-- Anwendung: `scripts/analysis/Berechnung_Reflexionsfaktor_FFT.m:47-50`
+- Anwendung: `scripts/03_analysis/Berechnung_Reflexionsfaktor_FFT.m:47-50`
 
 **Verwendung:**
 ```matlab
@@ -224,7 +218,6 @@ ir_windowed = ir .* win;
 - **JA:** FFT-basierte Analysen (Reflexionsfaktor, Spektrum)
 - **NEIN:** Energie-Berechnungen, RT60-Analyse, Zeitbereich-Plots
 
----
 
 ### 6. Filterung (Optional)
 
@@ -242,7 +235,7 @@ ir_windowed = ir .* win;
 **Häufig verwendete Filter im Projekt:**
 
 #### 6.1 Terzband-Filterung (1/3-Oktave)
-- **Ort:** `scripts/visualization/Visualize_Terzband_Filter.m:71,81`
+- **Ort:** `scripts/04_visualization/Visualize_Terzband_Filter.m:71,81`
 - **Filter:** Butterworth Bandpass, Ordnung 8
 - **Frequenzen:** 4 kHz - 63 kHz (Terzband-Schritte)
 - **Code:**
@@ -257,7 +250,7 @@ ir_windowed = ir .* win;
 - **Zweck:** Frequenzselektive Nachhallzeit-Berechnung
 
 #### 6.3 Reflexionsanalyse-Filterung
-- **Ort:** `scripts/analysis/Analyse_Reflexionsgrad.m:78-81`
+- **Ort:** `scripts/03_analysis/Analyse_Reflexionsgrad.m:78-81`
 - **Filter:** Butterworth Bandpass, Ordnung 4
 - **Frequenzen:** ±20% um Center-Frequenz
 
@@ -292,7 +285,6 @@ ir_windowed = ir .* win;
 - Reflexionsgrad-Analyse
 - **NICHT** für Full-Band Energie oder Zeitbereich-Analysen
 
----
 
 ### 7. Auto-Save (Optional)
 
@@ -331,9 +323,8 @@ Result.created             % Erstellungsdatum
 Result.last_modified       % Letzte Änderung
 ```
 
----
 
-## 🎯 Verwendungsszenarien
+##  Verwendungsszenarien
 
 ### Szenario 1: Standard-Preprocessing (für Analyse-Tools)
 ```matlab
@@ -384,9 +375,8 @@ ir_raw = extract_ir(S);
     'SavePath', 'processed/IR_Final.mat');
 ```
 
----
 
-## 📚 Funktionsreferenz
+##  Funktionsreferenz
 
 | Funktion | Datei | Zeile | Zweck |
 |----------|-------|-------|-------|
@@ -397,14 +387,12 @@ ir_raw = extract_ir(S);
 | `calc_terz_spectrum()` | `functions/calc_terz_spectrum.m` | - | Terzspektrum (intern gefiltert) |
 | `calc_rt60_spectrum()` | `functions/calc_rt60_spectrum.m` | - | RT60 (intern gefiltert) |
 
----
 
-## 🔗 Siehe auch
+##  Siehe auch
 
-- **Beispiel-Skript:** `scripts/preprocessing/example_ir_processing_pipeline.m`
+- **Beispiel-Skript:** `scripts/99_examples/example_ir_processing_pipeline.m`
 - **README:** Technische Details zu DC-Offset, Hanning, Filterung
-- **Main Preprocessing:** `scripts/preprocessing/step1_process_data.m`
+- **Main Preprocessing:** `scripts/00_pipeline/step1_process_data.m`
 
----
 
 *Zuletzt aktualisiert: 2026-01-19*

@@ -13,19 +13,19 @@ Auswertung_IR/
 ├── dataraw/                      # Rohdaten (.mat Dateien der Messungen)
 ├── processed/                    # Verarbeitete Daten (Result-Structs)
 ├── functions/                    # Zentrale Hilfsfunktionen
-│   ├── process_ir_pipeline.m        # 🆕 Zentrale Verarbeitungs-Pipeline (alle Schritte)
+│   ├── process_ir_pipeline.m        #  Zentrale Verarbeitungs-Pipeline (alle Schritte)
 │   ├── process_ir_modifications.m   # Zentrale IR-Modifikation mit Auto-Save
 │   ├── init_repo_paths.m            # Repository-Pfad-Initialisierung
 │   ├── truncate_ir.m                # IR-Truncation
 │   ├── extract_ir.m                 # IR-Extraktion aus Rohdaten
 │   ├── calc_terz_spectrum.m         # 1/3-Oktavband-Spektrum
 │   ├── calc_rt60_spectrum.m         # Nachhallzeit-Berechnung
-│   ├── IR_PROCESSING_OVERVIEW.md    # 📖 Übersicht aller IR-Verarbeitungsschritte
+│   ├── IR_PROCESSING_OVERVIEW.md    #  Übersicht aller IR-Verarbeitungsschritte
 │   └── ...weitere Hilfsfunktionen
 ├── scripts/                      # Alle MATLAB Scripts (organisiert)
 │   ├── preprocessing/            # Datenvorverarbeitung
 │   │   ├── step1_process_data.m            # Hauptverarbeitung: DC-Removal, Truncation, Spektrum
-│   │   └── example_ir_processing_pipeline.m # 🆕 Beispiele für alle Verarbeitungsschritte
+│   │   └── example_ir_processing_pipeline.m #  Beispiele für alle Verarbeitungsschritte
 │   ├── analysis/                 # Physikalische Analysen
 │   │   ├── Berechnung_Reflexionsfaktor_FFT.m  # FFT-basierte Reflexionsanalyse
 │   │   ├── Analyse_Reflexionsgrad.m           # Frequenzabhängiger Reflexionsgrad
@@ -66,10 +66,10 @@ Auswertung_IR/
 
 4.  **Verarbeitung (Preprocessing):**
     *   Bevor die Visualisierungs-Tools genutzt werden können, müssen die Rohdaten verarbeitet werden (DC-Removal, Truncation, Spektrumberechnung).
-    *   Führe das Skript `scripts/preprocessing/step1_process_data.m` aus:
+    *   Führe das Skript `scripts/00_pipeline/step1_process_data.m` aus:
         ```matlab
         cd /path/to/Auswertung_IR  % Zum Repository-Root wechseln
-        run('scripts/preprocessing/step1_process_data.m')
+        run('scripts/00_pipeline/step1_process_data.m')
         ```
     *   Das Script verarbeitet automatisch alle Dateien in `dataraw/` und speichert Ergebnisse in `processed/`.
 
@@ -92,10 +92,10 @@ Die Messungen wurden in einem definierten Raster durchgeführt. Für die Heatmap
 ## Funktionsweise der Skripte
 
 **Wichtig:** Starte Scripts entweder:
-1. Direkt aus dem Repository-Root: `run('scripts/tools/interactive_plotter.m')`
+1. Direkt aus dem Repository-Root: `run('scripts/05_tools/interactive_plotter.m')`
 2. Oder aus MATLAB File Browser (Scripts navigieren automatisch zum Root)
 
-### 1. `scripts/tools/interactive_plotter.m` (Haupt-Tool)
+### 1. `scripts/05_tools/interactive_plotter.m` (Haupt-Tool)
 Eine umfangreiche GUI zum explorativen Analysieren der Daten.
 *   **Modi:** Einzelansicht oder Vergleich (Differenzbildung) zweier Messungen.
 *   **Datenquellen:** Kann sowohl Rohdaten (`dataraw/`) als auch verarbeitete Daten (`processed/`) laden.
@@ -109,27 +109,27 @@ Eine umfangreiche GUI zum explorativen Analysieren der Daten.
     *   Nachhallzeit (T30) über Frequenz.
 *   **Export:** Ermöglicht das Speichern von Plots und Batch-Export(funktioniert noch nicht richtig) ganzer Varianten.
 
-### 2. `scripts/visualization/Darstellung_Pegel_ueber_Entfernung.m`
+### 2. `scripts/04_visualization/Darstellung_Pegel_ueber_Entfernung.m`
 Fokussiert auf die physikalische Ausbreitung des Schalls im Raum.
 *   Vergleicht gemessene Pegel mit der idealen 1/r-Kurve (bzw. 1/r² für Energie)
 *   Berechnet statistische Abweichungen (Standardabweichung vom Ideal)
 *   Erstellt 2D- und 3D-Scatterplots der Messpositionen im Raum
 *   Visualisiert Pfade und Differenzen zwischen verschiedenen Mess-Varianten
 
-### 3. `scripts/visualization/Darstellung_Heatmap_Video.m`
+### 3. `scripts/04_visualization/Darstellung_Heatmap_Video.m`
 Visualisiert die zeitliche Ausbreitung der Schallenergie.
 *   Erstellt `.mp4`-Videos der Energieausbreitung
 *   Zeigt 4x4-Raster der Messpositionen
 *   Farbe repräsentiert aktuellen RMS-Pegel in kurzen Zeitfenstern
 *   Nützlich für Analyse von Reflexionen und Raumakustik
 
-### 4. `scripts/visualization/Terzpegel_DBFs_einzeln.m`
+### 4. `scripts/04_visualization/Terzpegel_DBFs_einzeln.m`
 Skript für Stapelverarbeitung von Spektral-Plots.
 *   Erstellt standardisierte `stairs`-Plots (Treppendiagramme)
 *   Logarithmische X-Achsen oder Terzband-Indizes
 *   Automatische Speicherung in `Plots/`
 
-### 5. `scripts/tools/Visual_Truncation_Tool.m`
+### 5. `scripts/05_tools/Visual_Truncation_Tool.m`
 Interaktives Tool zum visuellen Schneiden von Impulsantworten.
 *   Lädt .mat Dateien aus `dataraw/` oder `processed/`
 *   Visualisiert IR im Zeitbereich
@@ -137,7 +137,7 @@ Interaktives Tool zum visuellen Schneiden von Impulsantworten.
 *   Echtzeit-Berechnung von Pegel, RMS, Energie
 *   Export der geschnittenen IR
 
-### 6. `scripts/analysis/Berechnung_Reflexionsfaktor_FFT.m`
+### 6. `scripts/03_analysis/Berechnung_Reflexionsfaktor_FFT.m`
 FFT-basierte Berechnung des frequenzabhängigen Reflexionsfaktors.
 *   Lädt Direktschall- und Reflexions-IRs
 *   Wendet Hanning-Fenster an (spektrale Leckage-Reduktion)
@@ -179,16 +179,15 @@ Die Pipeline führt alle Schritte in der korrekten Reihenfolge aus:
 ### Dokumentation
 
 - **Übersicht aller Schritte:** [`functions/IR_PROCESSING_OVERVIEW.md`](functions/IR_PROCESSING_OVERVIEW.md)
-- **Beispiel-Skript:** [`scripts/preprocessing/example_ir_processing_pipeline.m`](scripts/preprocessing/example_ir_processing_pipeline.m)
+- **Beispiel-Skript:** [`scripts/99_examples/example_ir_processing_pipeline.m`](scripts/99_examples/example_ir_processing_pipeline.m)
 - **Pipeline-Funktion:** [`functions/process_ir_pipeline.m`](functions/process_ir_pipeline.m)
 
 Das Beispiel-Skript zeigt:
-- ✅ 5 verschiedene Verarbeitungsszenarien
-- ✅ Schritt-für-Schritt Visualisierung
-- ✅ Manuelle vs. Pipeline-Verarbeitung
-- ✅ Vergleich aller Verarbeitungsschritte
+-  5 verschiedene Verarbeitungsszenarien
+-  Schritt-für-Schritt Visualisierung
+-  Manuelle vs. Pipeline-Verarbeitung
+-  Vergleich aller Verarbeitungsschritte
 
----
 
 ## Technische Details
 
@@ -210,13 +209,13 @@ Die Funktion subtrahiert den Mittelwert: `ir = ir - mean(ir)` und bietet optiona
 
 **Verwendung an:**
 - `functions/truncate_ir.m:15` - Nach IR-Extraktion
-- `scripts/analysis/Berechnung_Reflexionsfaktor_FFT.m:163` - Vor FFT-Analyse
-- `scripts/tools/Visual_Truncation_Tool.m:332` - Beim Laden von Daten
-- `scripts/tools/interactive_plotter.m` - Mehrere Stellen für konsistente Darstellung
+- `scripts/03_analysis/Berechnung_Reflexionsfaktor_FFT.m:163` - Vor FFT-Analyse
+- `scripts/05_tools/Visual_Truncation_Tool.m:332` - Beim Laden von Daten
+- `scripts/05_tools/interactive_plotter.m` - Mehrere Stellen für konsistente Darstellung
 
 #### 2. Hanning-Fenster (Windowing)
 **Wo wird es angewendet?**
-Das Hanning-Fenster wird **nur** bei der FFT-basierten Reflexionsfaktor-Berechnung verwendet (`scripts/analysis/Berechnung_Reflexionsfaktor_FFT.m:47-50`):
+Das Hanning-Fenster wird **nur** bei der FFT-basierten Reflexionsfaktor-Berechnung verwendet (`scripts/03_analysis/Berechnung_Reflexionsfaktor_FFT.m:47-50`):
 
 ```matlab
 win = hanning(N);
@@ -234,7 +233,7 @@ ir_ref_win = ir_ref .* win;
 #### 3. Filterung
 
 **Terzband-Filterung** (1/3-Oktave):
-- **Ort:** `scripts/visualization/Visualize_Terzband_Filter.m:71,81`
+- **Ort:** `scripts/04_visualization/Visualize_Terzband_Filter.m:71,81`
 - **Filter:** Butterworth Bandpass, **Ordnung 8**
 - **Frequenzen:** 4 kHz bis 63 kHz (1/3-Oktav-Schritte)
 - **Implementierung:** `filtfilt()` für Null-Phasen-Verzerrung
@@ -245,7 +244,7 @@ ir_ref_win = ir_ref .* win;
 - **Zweck:** Frequenzselektive Nachhallzeit-Analyse
 
 **Reflexionsanalyse:**
-- **Ort:** `scripts/analysis/Analyse_Reflexionsgrad.m:78-81`
+- **Ort:** `scripts/03_analysis/Analyse_Reflexionsgrad.m:78-81`
 - **Filter:** Frequenzabhängiger Bandpass (±20% um Centerfrequenz)
 - **Implementierung:** Butterworth 4. Ordnung
 
@@ -288,15 +287,15 @@ Damit die Skripte die Positionen und Varianten korrekt zuordnen können, sollten
 ### 2026-01-19b: IR-Verarbeitungs-Pipeline
 
 **Neue Features:**
-- 🆕 **Zentrale Pipeline-Funktion:** `process_ir_pipeline()` orchestriert alle IR-Verarbeitungsschritte
+-  **Zentrale Pipeline-Funktion:** `process_ir_pipeline()` orchestriert alle IR-Verarbeitungsschritte
   - DC-Removal, Truncation, Normalisierung, Windowing, Filterung, Auto-Save
   - Alle Parameter konfigurierbar
   - Detaillierte Pipeline-Info als Rückgabewert
-- 📖 **Umfassende Dokumentation:** `functions/IR_PROCESSING_OVERVIEW.md`
+-  **Umfassende Dokumentation:** `functions/IR_PROCESSING_OVERVIEW.md`
   - Alle 7 Verarbeitungsschritte detailliert beschrieben
   - Verwendungsszenarien und Code-Beispiele
   - Funktionsreferenz mit Zeilennummern
-- 📝 **Beispiel-Skript:** `example_ir_processing_pipeline.m`
+-  **Beispiel-Skript:** `example_ir_processing_pipeline.m`
   - 5 verschiedene Verarbeitungsszenarien
   - Schritt-für-Schritt Visualisierung
   - Vergleich: Manuelle vs. Pipeline-Verarbeitung
@@ -317,21 +316,20 @@ Damit die Skripte die Positionen und Varianten korrekt zuordnen können, sollten
 
 ### 2026-01-19a: Repository Refactoring
 **Strukturverbesserungen:**
-- ✅ **Neue Ordnerstruktur:** Alle Scripts in thematische Unterordner organisiert (`scripts/preprocessing/`, `scripts/analysis/`, `scripts/visualization/`, `scripts/tools/`, `scripts/export/`)
-- ✅ **Zentrale IR-Modifikations-Funktion:** `process_ir_modifications()` ersetzt Code-Duplikate für DC-Removal
-- ✅ **Auto-Save Funktionalität:** Automatische Speicherung von modifizierten IRs
-- ✅ **Automatische Pfad-Initialisierung:** Alle Scripts navigieren automatisch zum Repository-Root
-- ✅ **Verbesserte Dokumentation:** README komplett aktualisiert mit technischen Details zu DC-Offset, Hanning-Fenster, und Filterung
-- ✅ **Code-Duplikate entfernt:** DC-Removal an 5+ Stellen durch zentrale Funktion ersetzt
+-  **Neue Ordnerstruktur:** Alle Scripts in thematische Unterordner organisiert (`scripts/00_pipeline/`, `scripts/01_preprocessing/`, `scripts/02_qc_diagnostics/`, `scripts/03_analysis/`, `scripts/04_visualization/`, `scripts/05_tools/`, `scripts/06_export/`, `scripts/99_examples/`)
+-  **Zentrale IR-Modifikations-Funktion:** `process_ir_modifications()` ersetzt Code-Duplikate für DC-Removal
+-  **Auto-Save Funktionalität:** Automatische Speicherung von modifizierten IRs
+-  **Automatische Pfad-Initialisierung:** Alle Scripts navigieren automatisch zum Repository-Root
+-  **Verbesserte Dokumentation:** README komplett aktualisiert mit technischen Details zu DC-Offset, Hanning-Fenster, und Filterung
+-  **Code-Duplikate entfernt:** DC-Removal an 5+ Stellen durch zentrale Funktion ersetzt
 
 **Technische Dokumentation:**
-- 📖 DC-Offset Erklärung und Verwendung dokumentiert
-- 📖 Hanning-Fenster: Wo und warum es verwendet wird
-- 📖 Filterung: Übersicht aller Filter-Implementierungen (Terzband, RT60, Reflexion)
-- 📖 Auto-Save: Wie man automatische Speicherung aktiviert
+-  DC-Offset Erklärung und Verwendung dokumentiert
+-  Hanning-Fenster: Wo und warum es verwendet wird
+-  Filterung: Übersicht aller Filter-Implementierungen (Terzband, RT60, Reflexion)
+-  Auto-Save: Wie man automatische Speicherung aktiviert
 
 **Migrations-Hinweis:**
 Alle Scripts verwenden jetzt relative Pfade vom Repository-Root. Alte Pfade werden automatisch aufgelöst.
 
----
 *Erstellt für die Auswertung von Ultraschall-Raumimpulsantworten.*

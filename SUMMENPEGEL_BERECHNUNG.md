@@ -2,13 +2,12 @@
 
 Erstellt: 2026-01-19
 
-## 🎯 Was ist der Summenpegel?
+##  Was ist der Summenpegel?
 
 Der **Summenpegel (L_sum)** ist der **Gesamt-Energiepegel** über alle Terzbänder (4-63 kHz) in dBFS.
 
----
 
-## 📐 Berechnung in calc_terz_spectrum.m
+##  Berechnung in calc_terz_spectrum.m
 
 ### Schritt-für-Schritt Ablauf
 
@@ -28,7 +27,6 @@ freqs = (0:N_fft-1) * (fs / N_fft);  % Frequenz-Achse
 - `fs = 500 kHz`
 - `freqs = [0, 30.5 Hz, 61.0 Hz, ..., 499969.5 Hz]`
 
----
 
 #### **Schritt 2: Luftdämpfungs-Korrektur (falls dist > 0)**
 
@@ -50,7 +48,6 @@ end
 - `A_lin = 10^(1.6/20) = 1.20`
 - Signal wird um Faktor 1.20 verstärkt (= Dämpfung rückgängig machen)
 
----
 
 #### **Schritt 3: Nur positive Frequenzen nehmen**
 
@@ -65,7 +62,6 @@ freqs = freqs(valid_idx);
 - FFT ist symmetrisch (negative Frequenzen = konjugiert komplex zu positiven)
 - Nur positive Frequenzen 0 bis fs/2 relevant
 
----
 
 #### **Schritt 4: Energie-Dichte berechnen**
 
@@ -92,10 +88,9 @@ ir = [0.1, 0.2, -0.1, -0.2];  % N = 4
 energie_zeit = sum(ir.^2) = 0.1
 
 X = fft(ir);
-energie_freq = sum(abs(X).^2) / 4 = 0.1  // Gleich! ✓
+energie_freq = sum(abs(X).^2) / 4 = 0.1  // Gleich! 
 ```
 
----
 
 #### **Schritt 5: Terzbänder durchlaufen und Energie summieren**
 
@@ -149,7 +144,6 @@ band_energy = sum(alle energien) = 0.156
 L_dBFS(10kHz) = 10 * log10(0.156 / 1.0²) = -8.07 dB FS
 ```
 
----
 
 #### **Schritt 6: Summenpegel berechnen**
 
@@ -172,9 +166,8 @@ L_sum = 10 * log10(Σ(band_energies) / FS_global²)
 - **FS_global²**: Referenzenergie (globales Maximum der verarbeiteten IRs)
 - **L_sum**: Gesamt-Pegel in dB relativ zu FS_global
 
----
 
-## 🔬 Mathematische Herleitung
+##  Mathematische Herleitung
 
 ### Energie-Beziehung
 
@@ -204,7 +197,6 @@ E_sum = Σ(E_terz_k) für k = 1..13 (alle Terzbänder)
 L_sum [dBFS] = 10 * log10(E_sum / FS_global²)
 ```
 
----
 
 ### Warum FS_global²?
 
@@ -223,11 +215,10 @@ E_ref = FS_global² = 1.0²  // Energie eines Dauer-Signals mit Amplitude FS_glo
 0 dBFS = Pegel eines Signals, dessen Energie = FS_global²
 ```
 
-→ Wenn `E_sum = FS_global²`, dann `L_sum = 0 dB FS` ✓
+→ Wenn `E_sum = FS_global²`, dann `L_sum = 0 dB FS` 
 
----
 
-## 📊 Beispiel-Rechnung
+##  Beispiel-Rechnung
 
 ### Gegeben:
 
@@ -287,9 +278,8 @@ L_sum = 10 * log10(0.322 / 1.0²)
 - Der **Summenpegel** liegt bei **-4.92 dB FS**
 - Das Signal ist **deutlich unter** 0 dB FS (gut!)
 
----
 
-## 🚨 Wichtige Punkte
+##  Wichtige Punkte
 
 ### 1. **energy_sum vs. sum(L_dBFS)**
 
@@ -315,7 +305,6 @@ Band 2: -10 dB → Energie = 0.1
 Summe: Energie = 0.2 → -7 dB (NICHT -20 dB!)
 ```
 
----
 
 ### 2. **Luftdämpfungs-Korrektur VOR der Energie-Summierung**
 
@@ -332,7 +321,6 @@ energy_sum = sum(band_energies);  // Energien nach Korrektur
 
 → Luftdämpfung wird **kompensiert** BEVOR Summenpegel berechnet wird
 
----
 
 ### 3. **FS_global² ist die Referenz-ENERGIE**
 
@@ -356,9 +344,8 @@ L_sum = 10 * log10(energy_sum / FS_global²)
 
 → **Konsistenz ist kritisch!**
 
----
 
-## 🎯 Zusammenfassung
+##  Zusammenfassung
 
 ### Formel (kompakt):
 
@@ -372,19 +359,19 @@ wobei:
 
 ### Ablauf:
 
-1. ✅ **FFT** der verarbeiteten IR
-2. ✅ **Luftdämpfungs-Korrektur** (falls dist > 0)
-3. ✅ **Energie-Dichte**: `X_mag_sq = |X|² / N`
-4. ✅ **Terzbänder**: Für jedes Band k: `E_k = sum(X_mag_sq in Band)`
-5. ✅ **Summierung**: `E_sum = Σ(E_k)`
-6. ✅ **dBFS**: `L_sum = 10 * log10(E_sum / FS_global²)`
+1.  **FFT** der verarbeiteten IR
+2.  **Luftdämpfungs-Korrektur** (falls dist > 0)
+3.  **Energie-Dichte**: `X_mag_sq = |X|² / N`
+4.  **Terzbänder**: Für jedes Band k: `E_k = sum(X_mag_sq in Band)`
+5.  **Summierung**: `E_sum = Σ(E_k)`
+6.  **dBFS**: `L_sum = 10 * log10(E_sum / FS_global²)`
 
 ### Warum kann L_sum > 0 dB sein?
 
 **Mögliche Ursachen:**
 
 1. **FS_global aus rohen IRs** (mit DC-Offset)
-   → GELÖST durch 2-Pass Ansatz! ✅
+   → GELÖST durch 2-Pass Ansatz! 
 
 2. **Luftdämpfungs-Korrektur zu stark**
    → Bei kleinen Distanzen + hohen Frequenzen
@@ -399,9 +386,8 @@ wobei:
    → Tatsächlich höhere Energie bei bestimmten Frequenzen
    → Physikalisch möglich (z.B. Raummoden)
 
----
 
-## 📚 Verwandte Funktionen
+##  Verwandte Funktionen
 
 ### calc_rt60_spectrum.m
 
@@ -421,7 +407,6 @@ Visualisiert Terzband-Filter.
 Berechnet Reflexionsfaktor.
 - Nutzt möglicherweise FS_global (überprüfen!)
 
----
 
 *Erstellt: 2026-01-19*
 *Erklärt: Summenpegel-Berechnung in calc_terz_spectrum.m*
