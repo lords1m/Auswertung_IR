@@ -1,0 +1,389 @@
+% =============================================================================
+%  Kapitel: Interaktives Auswertungswerkzeug (Interactive Plotter)
+%  Belegarbeit – Raumakustik / Digitale Signalverarbeitung
+% =============================================================================
+\documentclass[12pt, a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[ngerman]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% Mathematik
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% Tabellen
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+
+% Code-Listings
+\usepackage{listings}
+\usepackage{xcolor}
+
+% Layout
+\usepackage[
+  left=3cm, right=2.5cm, top=2.5cm, bottom=2.5cm
+]{geometry}
+\usepackage{setspace}
+\usepackage{parskip}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+% Floats & Captions
+\usepackage{caption}
+\usepackage{float}
+
+% Hyperlinks (letztes Paket)
+\usepackage[hidelinks]{hyperref}
+
+% =============================================================================
+%  MATLAB-Listing-Stil
+% =============================================================================
+\definecolor{matlabkw}{rgb}{0.00, 0.00, 0.60}
+\definecolor{matlabstr}{rgb}{0.63, 0.13, 0.94}
+\definecolor{matlabcmt}{rgb}{0.13, 0.54, 0.13}
+\definecolor{matlabbg}{rgb}{0.97, 0.97, 0.97}
+\definecolor{matlabnr}{rgb}{0.50, 0.50, 0.50}
+
+\lstdefinestyle{matlab}{
+  language        = Matlab,
+  basicstyle      = \ttfamily\footnotesize\linespread{1.0}\selectfont,
+  keywordstyle    = \color{matlabkw}\bfseries,
+  stringstyle     = \color{matlabstr},
+  commentstyle    = \color{matlabcmt}\itshape,
+  backgroundcolor = \color{matlabbg},
+  frame           = single,
+  framesep        = 4pt,
+  rulecolor       = \color{black!25},
+  numbers         = left,
+  numberstyle     = \tiny\color{matlabnr},
+  numbersep       = 8pt,
+  stepnumber      = 1,
+  tabsize         = 4,
+  breaklines      = true,
+  breakatwhitespace = true,
+  showstringspaces = false,
+  captionpos      = b,
+  aboveskip       = 8pt,
+  belowskip       = 4pt,
+}
+\lstset{style=matlab}
+
+% =============================================================================
+%  Dokument
+% =============================================================================
+\begin{document}
+
+% ---------------------------------------------------------------------------
+\section{Interaktives Auswertungswerkzeug}
+\label{sec:plotter}
+% ---------------------------------------------------------------------------
+
+Zur visuellen Inspektion, Plausibilitätsprüfung und vergleichenden Analyse
+der verarbeiteten Messdaten wurde ein interaktives GUI-Werkzeug in MATLAB
+implementiert (\texttt{interactive\_plotter.m}).
+Das Werkzeug operiert auf den durch die Verarbeitungspipeline erzeugten
+\texttt{Proc\_*.mat}-Dateien, kann aber auch direkt auf Rohdaten
+aus \texttt{dataraw/} zugreifen und diese on-the-fly verarbeiten.
+
+% ---------------------------------------------------------------------------
+\subsection{Architektur und Initialisierung}
+% ---------------------------------------------------------------------------
+
+Die GUI basiert auf klassischen MATLAB-\texttt{uicontrol}-Elementen innerhalb
+einer einzelnen \texttt{figure}. Sämtliche Callback-Funktionen sind als
+verschachtelte Funktionen realisiert, die auf gemeinsame Zustandsvariablen
+im übergeordneten Workspace zugreifen -- insbesondere Achsengrenzen,
+den aktuellen Darstellungstyp und einen Heatmap-Cache.
+
+\begin{lstlisting}[caption={GUI-Grundstruktur und Zustandsverwaltung},
+                   label=lst:gui_init]
+f = figure('Name', 'Akustik Auswertung', 'NumberTitle', 'off', ...
+           'Position', [100, 100, 1200, 700], 'Color', 'w');
+pnlControl = uipanel(f, 'Position', [0.01 0.01 0.25 0.98], ...
+                      'Title', 'Einstellungen');
+
+% Zustandsvariablen
+lastPlotType = 1;
+ySettings = containers.Map('KeyType','double','ValueType','any');
+ySettings(1) = [-30, 10];    % Spektrum
+ySettings(2) = [-1.1, 1.1];  % Impulsantwort
+ySettings(3) = [-60, 5];     % ETC
+ySettings(4) = [-60, 5];     % EDC
+ySettings(5) = [-30, 20];    % Pegel vs. Entfernung
+ySettings(6) = [-30, 20];    % 3D Scatter
+ySettings(7) = [-60, 0];     % Heatmap
+ySettings(8) = [0, 0.4];     % RT60
+\end{lstlisting}
+
+Beim Start wird die globale Vollaussteuerungsreferenz $FS_\mathrm{global}$
+aus der ersten verfügbaren \texttt{Proc\_*.mat}-Datei geladen.
+Rohdaten, die über das Werkzeug geöffnet werden, werden gegen dieselbe
+Referenz skaliert, um die Vergleichbarkeit zu gewährleisten:
+
+\begin{lstlisting}[caption={Laden der globalen Referenz beim Start},
+                   label=lst:gui_ref]
+FS_global_ref = 1.0;
+procFiles = dir(fullfile(procDir, 'Proc_*.mat'));
+if ~isempty(procFiles)
+    tmpLoad = load(fullfile(procDir, procFiles(1).name), 'Result');
+    if isfield(tmpLoad.Result.meta, 'FS_global_used')
+        FS_global_ref = tmpLoad.Result.meta.FS_global_used;
+    end
+end
+\end{lstlisting}
+
+% ---------------------------------------------------------------------------
+\subsection{Betriebsmodi}
+% ---------------------------------------------------------------------------
+
+Das Werkzeug bietet zwei Betriebsmodi: \emph{Einzelansicht} und
+\emph{Vergleich (Differenz)}.
+
+Im \textbf{Einzelmodus} wird eine ausgewählte Messung dargestellt.
+Alle acht Darstellungstypen (s.\,Abschnitt~\ref{sec:darstellungen}) stehen
+zur Verfügung. Die Dateiliste wird dynamisch aus dem gewählten
+Quellverzeichnis (\texttt{processed/} oder \texttt{dataraw/}) erzeugt.
+
+Im \textbf{Vergleichsmodus} werden zwei Messungen überlagert.
+Beim Frequenzspektrum wird zusätzlich ein Differenz-Subplot erzeugt,
+der bandweise die Pegeldifferenz $\Delta L_k = L_{2,k} - L_{1,k}$
+als Balkendiagramm darstellt:
+
+\begin{lstlisting}[caption={Spektralvergleich mit Differenz-Subplot},
+                   label=lst:gui_compare]
+if isCompare
+    % Oberer Plot: Beide Spektren ueberlagert
+    axes(ax1);
+    stairs(x_plot, y1_plot, 'b-', 'LineWidth', 1.5, ...
+           'DisplayName', name1_leg);
+    stairs(x_plot, y2_plot, 'r-', 'LineWidth', 1.5, ...
+           'DisplayName', name2_leg);
+
+    % Unterer Plot: Differenz (Messung 2 - Referenz)
+    axes(ax2);
+    diff_y = y2_sub - y1_sub;
+    bar(x_ticks, diff_y, 'FaceColor', [0.5 0.5 0.5], 'BarWidth', 1);
+    ylabel('Differenz [dB]');
+    title('Differenz (Messung 2 - Messung 1)');
+end
+\end{lstlisting}
+
+% ---------------------------------------------------------------------------
+\subsection{Darstellungstypen}
+\label{sec:darstellungen}
+% ---------------------------------------------------------------------------
+
+Acht Darstellungstypen decken die wesentlichen akustischen Analyseperspektiven ab.
+Die Umschaltung erfolgt über ein Dropdown-Menü; beim Wechsel werden die
+jeweiligen Achsengrenzen automatisch gespeichert und wiederhergestellt.
+
+\begin{table}[H]
+\centering
+\caption{Verfügbare Darstellungstypen}
+\label{tab:plottypes}
+\begin{tabular}{@{}clll@{}}
+\toprule
+\textbf{Nr.} & \textbf{Bezeichnung} & \textbf{X-Achse} & \textbf{Y-Achse} \\
+\midrule
+1 & Frequenzspektrum (Terz) & Frequenz [Hz] & Pegel [dBFS] \\
+2 & Impulsantwort (Zeit)    & Zeit [ms]     & Amplitude \\
+3 & Energie-Zeit-Kurve (ETC)& Zeit [ms]     & Pegel [dB] \\
+4 & Energy Decay Curve (EDC)& Zeit [ms]     & Pegel [dB] \\
+5 & Pegel über Entfernung   & Entfernung [m]& Summenpegel [dBFS] \\
+6 & 3D~Scatter (Raum)       & X, Y [m]      & Pegel [dBFS] \\
+7 & Heatmap (Raumzeit)      & Rasterposition& Pegel [dBFS] \\
+8 & Nachhallzeit (RT60)     & Frequenz [Hz] & $T_{30}$ [s] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Frequenzspektrum (Terz)}
+
+Die Terzbandpegel werden als Treppenfunktion (\texttt{stairs}) dargestellt.
+Optional können eine A-Bewertung nach IEC~61672 sowie ein Overlay
+der theoretischen Luftdämpfung auf einer Sekundärachse zugeschaltet werden.
+Die A-Bewertungskurve wird frequenzabhängig berechnet:
+
+\begin{lstlisting}[caption={A-Bewertungsfilter nach IEC~61672},
+                   label=lst:gui_aweight]
+f2_aw = f_sub.^2;
+RA = (12200^2 .* f_sub.^4) ./ ((f2_aw + 20.6^2) .* ...
+     sqrt((f2_aw + 107.7^2) .* (f2_aw + 737.9^2)) .* ...
+     (f2_aw + 12200^2));
+A_dB = 20*log10(RA) + 2.00;
+y1_sub = y1_sub + A_dB;   % Korrektur auf dBFS(A)
+\end{lstlisting}
+
+\subsubsection{Impulsantwort und Energie-Zeit-Kurve}
+
+Die Zeitdarstellung zeigt die truncierte Impulsantwort in Millisekunden.
+Die ETC wird aus dem logarithmierten Absolutwert berechnet:
+
+\begin{equation}
+    \mathrm{ETC}(t) = 20 \cdot \log_{10}\!\bigl(|h(t)| + \varepsilon\bigr)
+    \label{eq:etc}
+\end{equation}
+
+Über eine Checkbox kann zwischen relativer Zeit (ab Onset) und absoluter
+Probenzeit (bezogen auf den Original-Datensatz) umgeschaltet werden:
+
+\begin{lstlisting}[caption={Umschaltung relative/absolute Zeitachse},
+                   label=lst:gui_abstime]
+offset1 = 0;
+if hShowAbsTime.Value && isfield(R1.time.metrics, 'idx_start')
+    offset1 = (R1.time.metrics.idx_start - 1) / R1.meta.fs * 1000;
+end
+t1 = (0:length(R1.time.ir)-1) / R1.meta.fs * 1000 + offset1;
+\end{lstlisting}
+
+\subsubsection{Energy Decay Curve (EDC)}
+
+Die EDC basiert auf der Schroeder-Rückwärtsintegration
+(vgl.\,Gleichung~\ref{eq:edc} im Pipeline-Kapitel) und wird über
+\texttt{calc\_edc()} berechnet.
+Im Vergleichsmodus werden beide Kurven überlagert, sodass
+Unterschiede im Abklingverhalten direkt sichtbar sind.
+
+\subsubsection{Pegel über Entfernung und 3D-Scatter}
+
+Für die entfernungsabhängige Darstellung werden alle Positionen einer Variante
+geladen und deren Summenpegel gegen den Quell-Empfänger-Abstand aufgetragen.
+Zusätzlich wird eine theoretische $1/r$-Abfallkurve über
+\texttt{calc\_ideal\_curve()} eingeblendet.
+Der 3D-Scatter projiziert dieselben Daten auf die räumlichen Koordinaten
+des Messrasters:
+
+\begin{lstlisting}[caption={Sammlung der Pegelwerte aller Positionen einer Variante},
+                   label=lst:gui_dist]
+files = dir(fullfile(procDir, sprintf('Proc_%s_Pos*.mat', variante)));
+for i = 1:length(files)
+    D = load(fullfile(files(i).folder, files(i).name), 'Result');
+    val = D.Result.freq.sum_level;
+    posNum = str2double(D.Result.meta.position);
+    idx = find([geo.pos] == posNum);
+    if ~isempty(idx)
+        d = geo(idx).distance;
+        if d > 0         % Quellposition ausschliessen
+            dist(end+1)    = d;
+            levels(end+1)  = val;
+        end
+    end
+end
+\end{lstlisting}
+
+\subsubsection{Heatmap (Raumzeit)}
+
+Die Heatmap bildet die momentane Energieverteilung auf dem Messraster
+zu einem frei wählbaren Zeitpunkt ab.
+Ein Schieberegler steuert den Zeitpunkt; eine Animations\-funktion
+durchfährt den zeitlichen Verlauf automatisch.
+Die Berechnung des Heatmap-Gitters erfolgt über
+\texttt{calc\_heatmap\_grid()}, das aus den IRs aller Positionen
+die momentane Energie zum gewünschten Zeitpunkt extrahiert und auf
+ein $4{\times}4$-Raster abbildet:
+
+\begin{lstlisting}[caption={Heatmap-Daten und Animation},
+                   label=lst:gui_heatmap]
+t_ms = get(hSliderTime, 'Value');
+data1 = get_heatmap_data(R1.meta.variante, 1);  % gecachte IRs
+grid1 = calc_heatmap_grid(data1, t_ms, R1.meta.fs, FS_global_ref);
+
+min_db = str2double(get(hEditThreshold, 'String'));
+cLim   = [min_db, 0];                           % dBFS-Farbskala
+\end{lstlisting}
+
+Die Farbskala verläuft von Weiß (niedriger Pegel) zu Dunkelblau
+(hoher Pegel). Der untere Schwellwert ist über ein Eingabefeld einstellbar.
+In jeder Zelle wird die Positionsbezeichnung sowie der gerundete Momentanpegel
+eingeblendet.
+
+\subsubsection{Nachhallzeit (RT60) über Frequenz}
+
+Die frequenzabhängige Nachhallzeit $T_{30}$ wird als Treppenfunktion pro
+Terzband dargestellt.
+Zusätzlich zur Einzelmessung wird automatisch der Mittelwert
+über alle Positionen derselben Variante berechnet und als gestrichelte
+Referenzlinie eingeblendet:
+
+\begin{lstlisting}[caption={Mittelwertbildung der RT60 über alle Positionen},
+                   label=lst:gui_rt60avg]
+files = dir(fullfile(procDir, sprintf('Proc_%s_Pos*.mat', variante)));
+sum_t30   = zeros(size(f_vec));
+count_t30 = zeros(size(f_vec));
+
+for i = 1:length(files)
+    D = load(fullfile(files(i).folder, files(i).name), 'Result');
+    [vals, ~] = calc_rt60_spectrum(D.Result.time.ir, D.Result.meta.fs);
+    mask = ~isnan(vals);
+    sum_t30(mask)   = sum_t30(mask)   + vals(mask);
+    count_t30(mask) = count_t30(mask) + 1;
+end
+avg_vals = sum_t30 ./ count_t30;
+\end{lstlisting}
+
+% ---------------------------------------------------------------------------
+\subsection{Datenanbindung und On-the-fly-Verarbeitung}
+% ---------------------------------------------------------------------------
+
+Die Ladefunktion \texttt{loadData()} unterscheidet zwischen vorverarbeiteten
+und rohen Daten. Vorverarbeitete Dateien enthalten bereits das vollständige
+\texttt{Result}-Struct; bei Rohdaten wird die Verarbeitungskette
+(Signalauslese, DC-Entfernung, Spektralanalyse) innerhalb des Plotters
+durchgeführt:
+
+\begin{lstlisting}[caption={Datenladen: vorverarbeitet vs.\,Rohdaten},
+                   label=lst:gui_load]
+if sourceType == 1   % Processed
+    tmp = load(fullfile(procDir, filename));
+    R   = tmp.Result;
+else                  % Raw
+    [S, meta] = load_and_parse_file(fullfile(dataDir, filename));
+    ir = extract_ir(S);
+    ir = process_ir_modifications(ir, 'RemoveDC', true, ...
+                                       'AutoSave', false);
+    R.time.ir = ir;
+    R.meta    = meta;
+    R.meta.fs = 500e3;
+    [L_terz, L_sum, f_center] = calc_terz_spectrum( ...
+        ir, R.meta.fs, FS_global_ref, dist, T_val, LF_val);
+    R.freq.f_center   = f_center;
+    R.freq.terz_dbfs  = L_terz;
+    R.freq.sum_level  = L_sum;
+end
+\end{lstlisting}
+
+% ---------------------------------------------------------------------------
+\subsection{Bedienelemente und Exportfunktion}
+% ---------------------------------------------------------------------------
+
+Das Steuerungspanel auf der linken Seite der GUI umfasst folgende Elemente:
+Moduswahl (Einzel/Vergleich), Datenquellenwahl (vorverarbeitet/roh),
+Dateilisten für beide Messkanäle, Darstellungstyp-Auswahl, Frequenzfilter
+($4\,\mathrm{kHz}$--$63\,\mathrm{kHz}$), fixierbare X- und Y-Achsen\-grenzen,
+sowie darstellungsspezifische Optionen (A-Bewertung, Luftdämpfungs-Overlay,
+Energiemodus, absolute Zeitachse).
+
+Die Achsengrenzen werden pro Darstellungstyp in einer \texttt{containers.Map}
+gespeichert und beim Wechsel automatisch restauriert.
+Dies verhindert, dass z.\,B.\,die Amplituden\-grenzen einer Impulsantwort
+auf ein Frequenzspektrum übertragen werden.
+
+Der Button \emph{Plot speichern} exportiert die aktuelle Darstellung
+wahlweise als PNG (300\,dpi), PDF oder MATLAB-\texttt{.fig}-Datei.
+Dazu wird der Plotbereich in eine temporäre, unsichtbare \texttt{figure}
+kopiert und über \texttt{exportgraphics()} gespeichert:
+
+\begin{lstlisting}[caption={Plot-Export in verschiedene Formate},
+                   label=lst:gui_save]
+f_temp = figure('Visible', 'off', 'Color', 'w', ...
+                'Position', [0 0 1000 700]);
+new_ax = copyobj(findobj(f, 'Type', 'axes'), f_temp);
+exportgraphics(f_temp, savePath, 'Resolution', 300);
+delete(f_temp);
+\end{lstlisting}
+
+\end{document}

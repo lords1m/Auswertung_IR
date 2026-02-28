@@ -11,8 +11,8 @@ function [ir_trunc, metrics] = truncate_ir(ir, fixed_length_samples)
         return;
     end
     
-    % DC entfernen
-    ir = ir - mean(ir);
+    % DC entfernen (zentrale Funktion)
+    ir = process_ir_modifications(ir, 'RemoveDC', true, 'AutoSave', false);
     
     N = length(ir);
     ir_abs = abs(ir);

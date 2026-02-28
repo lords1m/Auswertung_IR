@@ -2,7 +2,15 @@ function interactive_plotter()
     % GUI zur Analyse und zum Vergleich von Messdaten.
     
     % Config
+    % Repository-Pfade initialisieren (navigiert zum Root)
+    if exist('../../functions', 'dir')
+        cd('../..');
+    elseif exist('../functions', 'dir')
+        cd('..');
+    end
     addpath('functions');
+init_repo_paths();
+
     procDir = 'processed';
     dataDir = 'dataraw';
     if ~exist(procDir, 'dir'), errordlg('Ordner "processed" fehlt.', 'Fehler'); return; end
@@ -107,6 +115,16 @@ function interactive_plotter()
                             'String', 'Luftdämpfung anzeigen', 'Value', 0, ...
                             'Callback', @updatePlot, 'Visible', 'off');
 
+    % A-Bewertung Checkbox (für Spektrum)
+    hAweight = uicontrol(pnlControl, 'Style', 'checkbox', 'Position', [10 65 200 20], ...
+                         'String', 'A-Bewertung [dBFS(A)]', 'Value', 0, ...
+                         'Callback', @updatePlot, 'Visible', 'off');
+
+    % Frequenzskalierung Checkbox (für Spektrum)
+    hScaleFreq = uicontrol(pnlControl, 'Style', 'checkbox', 'Position', [10 45 200 20], ...
+                         'String', 'Frequenz auf Realmaßstab (1:20)', 'Value', 0, ...
+                         'Callback', @updatePlot, 'Visible', 'off');
+
     % Energie-Modus Checkbox (für Pegel über Entfernung)
     hEnergyMode = uicontrol(pnlControl, 'Style', 'checkbox', 'Position', [10 85 200 20], ...
                             'String', 'Energie (Linear) statt dB', 'Value', 0, ...
@@ -148,7 +166,7 @@ function interactive_plotter()
                          'Callback', @playAnimation);
 
     % Speichern Button
-    uicontrol(pnlControl, 'Style', 'pushbutton', 'Position', [10 35 200 25], ...
+    uicontrol(pnlControl, 'Style', 'pushbutton', 'Position', [10 5 200 25], ...
               'String', 'Plot speichern', 'Callback', @savePlot);
 
     updateFile1List();
@@ -317,6 +335,8 @@ function interactive_plotter()
             set(hFixedX, 'Visible', 'on');
             set(hFilterFreq, 'Visible', 'on');
             if plotType == 1, set(hShowAirAbs, 'Visible', 'on'); else, set(hShowAirAbs, 'Visible', 'off'); end
+            if plotType == 1, set(hAweight, 'Visible', 'on'); else, set(hAweight, 'Visible', 'off'); end
+            if plotType == 1, set(hScaleFreq, 'Visible', 'on'); else, set(hScaleFreq, 'Visible', 'off'); end
             set(hYMin, 'Visible', 'on');
             set(hYMax, 'Visible', 'on');
             set(hXMin, 'Visible', 'on');
@@ -376,16 +396,35 @@ function interactive_plotter()
                 
                 f_sub = f_vec(mask);
                 y1_sub = y1(mask);
-                
+
+                % A-Bewertung (IEC 61672)
+                useAweight = hAweight.Value;
+                A_dB = zeros(size(f_sub));
+                if useAweight
+                    f2_aw = f_sub.^2;
+                    RA = (12200^2 .* f_sub.^4) ./ ((f2_aw + 20.6^2) .* ...
+                         sqrt((f2_aw + 107.7^2) .* (f2_aw + 737.9^2)) .* (f2_aw + 12200^2));
+                    A_dB = 20*log10(RA) + 2.00;
+                    y1_sub = y1_sub + A_dB;
+                end
+
                 y1_plot = [y1_sub, y1_sub(end)];
                 x_plot = (1:length(y1_plot)) - 0.5;
                 
-                x_labels = arrayfun(@(x) sprintf('%g', x), f_sub, 'UniformOutput', false);
+                scaleFactor = 20;
+                if hScaleFreq.Value
+                    f_display = f_sub / scaleFactor;
+                    x_labels = arrayfun(@(x) sprintf('%g', x), f_display, 'UniformOutput', false);
+                    xlabel_text = 'Frequenz [Hz, umgerechnet]';
+                else
+                    x_labels = arrayfun(@(x) sprintf('%g', x), f_sub, 'UniformOutput', false);
+                    xlabel_text = 'Frequenz [Hz]';
+                end
                 x_ticks = 1:length(f_sub);
                 
                 if isCompare
                     y2 = R2.freq.terz_dbfs;
-                    y2_sub = y2(mask);
+                    y2_sub = y2(mask) + A_dB;
                     y2_plot = [y2_sub, y2_sub(end)];
                     
                     axes(ax1); 
@@ -394,7 +433,9 @@ function interactive_plotter()
                     
                     stairs(x_plot, y1_plot, 'b-', 'LineWidth', 1.5, 'DisplayName', name1_leg); hold on;
                     stairs(x_plot, y2_plot, 'r-', 'LineWidth', 1.5, 'DisplayName', name2_leg);
-                    grid on; legend show; ylabel('Pegel [dBFS]'); title('Frequenzgang Vergleich');
+                    grid on; legend show;
+                    if useAweight, ylabel('Pegel [dBFS(A)]'); else, ylabel('Pegel [dBFS]'); end
+                    if useAweight, title('Frequenzgang Vergleich (A-bewertet)'); else, title('Frequenzgang Vergleich'); end
                     set(gca, 'XTick', x_ticks, 'XTickLabel', x_labels);
                     xtickangle(45);
                     if useFixedX, xlim([xMin xMax]); else, xlim([0 length(f_sub)+1]); end
@@ -405,7 +446,7 @@ function interactive_plotter()
                     axes(ax2);
                     diff_y = y2_sub - y1_sub;
                     bar(x_ticks, diff_y, 'FaceColor', [0.5 0.5 0.5], 'BarWidth', 1);
-                    grid on; ylabel('Differenz [dB]'); xlabel('Frequenz [Hz]');
+                    grid on; ylabel('Differenz [dB]'); xlabel(xlabel_text);
                     title('Differenz (Messung 2 - Messung 1)');
                     set(gca, 'XTick', x_ticks, 'XTickLabel', x_labels);
                     xtickangle(45);
@@ -437,20 +478,23 @@ function interactive_plotter()
                             name_k = list1{idx1(k)};
                             Rk = loadData(name_k, hSource1.Value);
                             yk = Rk.freq.terz_dbfs;
-                            yk_sub = yk(mask);
+                            yk_sub = yk(mask) + A_dB;
                             yk_plot = [yk_sub, yk_sub(end)];
                             stairs(x_plot, yk_plot, 'LineWidth', 1.5, ...
                                    'Color', colorMap(k,:), ...
                                    'DisplayName', cleanName(name_k));
                         end
-                        grid on; xlabel('Frequenz [Hz]'); ylabel('Pegel [dBFS]');
+                        grid on; xlabel(xlabel_text);
+                        if useAweight, ylabel('Pegel [dBFS(A)]'); else, ylabel('Pegel [dBFS]'); end
                         title(sprintf('Spektrum: Mehrfachauswahl (%d Positionen)', numel(idx1)));
                         legend('show');
                     else
                         stairs(x_plot, y1_plot, 'b-', 'LineWidth', 2);
-                        grid on; xlabel('Frequenz [Hz]'); ylabel('Pegel [dBFS]');
+                        grid on; xlabel(xlabel_text);
+                        if useAweight, ylabel('Pegel [dBFS(A)]'); else, ylabel('Pegel [dBFS]'); end
                         title(['Spektrum: ' cleanName(name1)]);
                     end
+
                     set(gca, 'XTick', x_ticks, 'XTickLabel', x_labels);
                     xtickangle(45);
                     if useFixedX, xlim([xMin xMax]); else, xlim([0 length(f_sub)+1]); end
@@ -503,7 +547,7 @@ function interactive_plotter()
                 xlabel('Zeit [ms]'); ylabel('Amplitude');
                 grid on;
                 if useFixedScale
-                    ylim([-FS_global_ref, FS_global_ref] * 1.1);
+                    ylim([yMin yMax]);
                 end
                 if useFixedX, xlim([xMin xMax]); end
 
@@ -816,7 +860,8 @@ function interactive_plotter()
             [S, meta] = load_and_parse_file(filepath);
             ir = extract_ir(S);
             if isempty(ir), ir = zeros(100,1); end
-            ir = ir - mean(ir); % DC-Offset entfernen für konsistente Darstellung
+            % DC-Offset entfernen für konsistente Darstellung (zentrale Funktion)
+            ir = process_ir_modifications(ir, 'RemoveDC', true, 'AutoSave', false);
             
             R.time.ir = ir;
             R.time.metrics.idx_start = 1;
@@ -879,7 +924,8 @@ function interactive_plotter()
                     if ~strcmp(meta.variante, variante), continue; end
                     ir = extract_ir(S);
                     if isempty(ir), continue; end
-                    ir = ir - mean(ir);
+                    % DC-Offset entfernen (zentrale Funktion)
+                    ir = process_ir_modifications(ir, 'RemoveDC', true, 'AutoSave', false);
                     fs_loc = 500e3;
                 end
                 
@@ -926,7 +972,7 @@ function interactive_plotter()
                     if energyMode
                         val = sum((ir - mean(ir)).^2);
                     else
-                        val = 20*log10(rms(ir - mean(ir)) / FS_global_ref + eps);
+                        val = 10*log10((sum((ir - mean(ir)).^2) + eps) / (FS_global_ref^2));
                     end
                 end
                 

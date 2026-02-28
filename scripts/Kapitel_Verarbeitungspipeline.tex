@@ -1,0 +1,655 @@
+% =============================================================================
+%  Kapitel: Verarbeitungspipeline für Impulsantworten
+%  Belegarbeit – Raumakustik / Digitale Signalverarbeitung
+% =============================================================================
+\documentclass[12pt, a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[ngerman]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% Mathematik
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% Tabellen
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+
+% Code-Listings
+\usepackage{listings}
+\usepackage{xcolor}
+
+% Layout
+\usepackage[
+  left=3cm, right=2.5cm, top=2.5cm, bottom=2.5cm
+]{geometry}
+\usepackage{setspace}
+\usepackage{parskip}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+% Floats & Captions
+\usepackage{caption}
+\usepackage{float}
+
+% Hyperlinks (letztes Paket)
+\usepackage[hidelinks]{hyperref}
+
+% =============================================================================
+%  MATLAB-Listing-Stil
+% =============================================================================
+\definecolor{matlabkw}{rgb}{0.00, 0.00, 0.60}   % keywords: dunkelblau
+\definecolor{matlabstr}{rgb}{0.63, 0.13, 0.94}   % strings: violett
+\definecolor{matlabcmt}{rgb}{0.13, 0.54, 0.13}   % comments: grün
+\definecolor{matlabbg}{rgb}{0.97, 0.97, 0.97}    % background: hellgrau
+\definecolor{matlabnr}{rgb}{0.50, 0.50, 0.50}    % line numbers: grau
+
+\lstdefinestyle{matlab}{
+  language        = Matlab,
+  basicstyle      = \ttfamily\footnotesize\linespread{1.0}\selectfont,
+  keywordstyle    = \color{matlabkw}\bfseries,
+  stringstyle     = \color{matlabstr},
+  commentstyle    = \color{matlabcmt}\itshape,
+  backgroundcolor = \color{matlabbg},
+  frame           = single,
+  framesep        = 4pt,
+  rulecolor       = \color{black!25},
+  numbers         = left,
+  numberstyle     = \tiny\color{matlabnr},
+  numbersep       = 8pt,
+  stepnumber      = 1,
+  tabsize         = 4,
+  breaklines      = true,
+  breakatwhitespace = true,
+  showstringspaces = false,
+  captionpos      = b,
+  aboveskip       = 8pt,
+  belowskip       = 4pt,
+}
+\lstset{style=matlab}
+
+% =============================================================================
+%  Dokument
+% =============================================================================
+\begin{document}
+
+% ---------------------------------------------------------------------------
+\section{Verarbeitungspipeline für Impulsantworten}
+% ---------------------------------------------------------------------------
+
+\subsection*{Systemparameter}
+
+\begin{table}[H]
+\centering
+\caption{Konfigurationsparameter der Verarbeitungspipeline}
+\label{tab:params}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Parameter} & \textbf{Wert} \\
+\midrule
+Abtastrate $f_\mathrm{s}$ & 500\,kHz \\
+IR-Länge & 30\,ms (15\,000 Samples) \\
+Terzbänder & 13 Bänder nach IEC~61260, 4\,kHz–63\,kHz \\
+T30-Auswertungsfenster & $-5$\,dB bis $-35$\,dB \\
+Temperatur $T$ & 20\,°C \\
+Relative Luftfeuchte LF & 50\,\% \\
+Luftdruck $p$ & 101{,}325\,kPa \\
+Empfängerpositionen & 15 Positionen, $4{\times}4$\,m-Raster \\
+Schallquellenposition & Ursprung $(0,\,0)$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ---------------------------------------------------------------------------
+\subsection{Initialisierung und Datenladen}
+% ---------------------------------------------------------------------------
+
+Die Verzeichnisstruktur des Projekts wird über \texttt{init\_repo\_paths()} initialisiert.
+Die Funktion bestimmt das Repository-Root anhand ihres eigenen Dateipfads,
+wechselt das Arbeitsverzeichnis entsprechend und fügt den Unterordner
+\texttt{functions/} dem MATLAB-Suchpfad hinzu.
+
+\begin{lstlisting}[caption={Pfadinitialisierung via \texttt{init\_repo\_paths.m}},
+                   label=lst:init]
+thisFile    = mfilename('fullpath');
+functionsDir = fileparts(thisFile);
+repoRoot    = fileparts(functionsDir);
+
+if ~strcmp(pwd, repoRoot)
+    cd(repoRoot);
+end
+if ~contains(path, functionsDir)
+    addpath(functionsDir);
+end
+\end{lstlisting}
+
+Die Messgeometrie umfasst 15~Empfängerpositionen auf einem gleichmäßigen
+$4{\times}4$\,m-Raster sowie eine Schallquelle im Koordinatenursprung $(0,\,0)$.
+Der Abruf erfolgt über \texttt{get\_geometry()}; die euklidischen Quell-Empfänger-Abstände
+werden pro Position berechnet und im Struct gespeichert:
+
+\begin{lstlisting}[caption={Geometriedefinition und Abstandsberechnung (\texttt{get\_geometry.m})},
+                   label=lst:geo]
+coords = [
+     1, 0,   1.2;   2, 0.3, 1.2;   3, 0.6, 1.2;   4, 1.2, 1.2;
+     5, 0,   0.6;   6, 0.3, 0.6;   7, 0.6, 0.6;   8, 1.2, 0.6;
+     9, 0,   0.3;  10, 0.3, 0.3;  11, 0.6, 0.3;  12, 1.2, 0.3;
+    13, 0.3, 0;    14, 0.6, 0;    15, 1.2, 0
+];
+source_x = 0;  source_y = 0;
+
+for i = 1:size(coords,1)
+    x = coords(i,2);  y = coords(i,3);
+    pos_info(i).distance = sqrt((x-source_x)^2 + (y-source_y)^2);
+end
+\end{lstlisting}
+
+Die Rohdaten werden durch einen rekursiven Scan aller \texttt{.mat}-Dateien im
+Verzeichnis \texttt{dataraw/} erfasst:
+
+\begin{lstlisting}[caption={Datei-Scan des Rohdatenverzeichnisses (\texttt{step1\_process\_data.m})},
+                   label=lst:scan]
+dataDir = 'dataraw';
+files   = dir(fullfile(dataDir, '*.mat'));
+\end{lstlisting}
+
+% ---------------------------------------------------------------------------
+\subsection{Pass~1 – IR-Extraktion und Vorverarbeitung}
+% ---------------------------------------------------------------------------
+
+\subsubsection{Metadaten-Parsing}
+
+Die Funktion \texttt{load\_and\_parse\_file()} extrahiert aus dem Dateinamen die
+Messmetadaten: Variante, Positionsnummer und Messtyp (Quelle oder Mikrofon).
+Zwei reguläre Ausdrücke decken die im Datensatz vorkommenden Namensschemata ab.
+Sonderzeichen werden durch eine interne Hilfsfunktion
+in dateinamenkompatible Unterstriche überführt:
+
+\begin{lstlisting}[caption={Regex-basiertes Metadaten-Parsing (\texttt{load\_and\_parse\_file.m})},
+                   label=lst:meta]
+% Strategie A: Empfaengerposition am Dateinamenende
+[tokens, startIdx] = regexp(fname, ...
+    '(?i)[_,;\. ]+pos[_\- ]*([A-Za-z0-9_]+)$', ...
+    'tokens', 'start', 'once');
+if ~isempty(tokens)
+    meta.position = sanitize_string(tokens{1});
+    meta.variante = sanitize_string(fname(1:startIdx-1));
+    meta.type = 'Mic';
+    return;
+end
+
+% Strategie B: Quellmessung
+[~, startIdx_src] = regexp(fname, '(?i)[_,;\. ]+quelle.*$', ...
+    'tokens', 'start', 'once');
+if ~isempty(startIdx_src)
+    meta.position = '0';
+    meta.variante = sanitize_string(fname(1:startIdx_src-1));
+    meta.type = 'Source';
+end
+\end{lstlisting}
+
+\subsubsection{IR-Extraktion}
+
+Die Extraktion der Impulsantwort aus dem MATLAB-Struct erfolgt über
+\texttt{extract\_ir()}. Das Struct wird sequenziell nach Feldern mit
+festgelegten Namenskonventionen durchsucht
+(\texttt{RiR}, \texttt{RIR}, \texttt{ir}, \texttt{IR}, \texttt{aufn}, \texttt{audio}).
+Das erste qualifizierende Feld (numerisch, $>\,100$ Elemente) wird nach
+\texttt{double} konvertiert und als Spaltenvektor zurückgegeben:
+
+\begin{lstlisting}[caption={Feldsuche und Typ-Konvertierung (\texttt{extract\_ir.m})},
+                   label=lst:extract]
+field_candidates = {'RiR', 'RIR', 'ir', 'IR', 'aufn', 'audio'};
+
+for i = 1:length(field_candidates)
+    fn = field_candidates{i};
+    if isfield(S, fn) && isnumeric(S.(fn)) && numel(S.(fn)) > 100
+        ir = double(S.(fn)(:));
+        return;
+    end
+end
+\end{lstlisting}
+
+\subsubsection{DC-Offset-Entfernung}
+
+Der Gleichanteil wird durch Subtraktion des arithmetischen Mittelwerts
+über die gesamte IR beseitigt:
+
+\begin{equation}
+    ir_\mathrm{clean} = ir - \overline{ir}
+    \label{eq:dc}
+\end{equation}
+
+Im Code erfolgt dies innerhalb von \texttt{truncate\_ir()} über den Aufruf
+\texttt{process\_ir\_modifications(ir,\,'RemoveDC',\,true)}.
+
+\subsubsection{Truncation}
+
+Die Funktion \texttt{truncate\_ir()} identifiziert den signalrelevanten Abschnitt
+der IR in vier Teilschritten.
+
+\paragraph{Peak-Detektion.}
+Das globale Maximum des Absolutwerts bestimmt die Referenzamplitude und
+den zeitlichen Ankerpunkt:
+
+\begin{lstlisting}[caption={Peak-Detektion (\texttt{truncate\_ir.m})},
+                   label=lst:peak]
+ir_abs   = abs(ir);
+[max_amp, idx_peak] = max(ir_abs);
+\end{lstlisting}
+
+\paragraph{Onset-Detektion.}
+Ausgehend vom Peak-Index wird rückwärts nach dem letzten Sample gesucht,
+dessen Betrag einen Schwellwert von 2\,\% der Peak-Amplitude unterschreitet.
+Dem so bestimmten Onset-Index werden 250 Samples als Vorläufer vorangestellt:
+
+\begin{lstlisting}[caption={Onset-Rückwärtssuche mit Pre-Roll (\texttt{truncate\_ir.m})},
+                   label=lst:onset]
+threshold_start = max_amp * 0.02;
+
+idx_below  = find(ir_abs(1:idx_peak) < threshold_start, 1, 'last');
+if isempty(idx_below), idx_onset = 1;
+else, idx_onset = idx_below + 1; end
+
+idx_start  = max(1, idx_onset - 250);   % 250-Sample-Vorlauf
+\end{lstlisting}
+
+\paragraph{Rauschpegel-Schätzung.}
+Der Rauschpegel wird aus dem letzten Zehntel der unkomprimierten IR geschätzt
+und dient als Grundlage für die SNR-Berechnung der truncierten Antwort:
+
+\begin{lstlisting}[caption={Rauschpegel-Schätzung (\texttt{truncate\_ir.m})},
+                   label=lst:noise]
+noise_section = ir_abs(ceil(N*0.9):end);
+mu_noise  = mean(noise_section);
+std_noise = std(noise_section);
+...
+metrics.snr_db = 20*log10(rms(ir_trunc) / (std_noise + eps));
+\end{lstlisting}
+
+\paragraph{Feste Länge mit Zero-Padding.}
+Bei aktiviertem Parameter \texttt{use\_fixed\_length=true} wird die IR auf exakt
+$f_\mathrm{s} \cdot t_\mathrm{fix} = 15\,000$~Samples beschnitten.
+Unterschreitet die verbleibende Signallänge diesen Wert, wird mit Nullen aufgefüllt:
+
+\begin{lstlisting}[caption={Beschneidung auf Festlänge mit Padding (\texttt{truncate\_ir.m})},
+                   label=lst:trunc]
+if use_fixed_length
+    target_samples = round(fixed_duration_s * fs);   % = 15000
+end
+[ir_trunc, metrics] = truncate_ir(ir_raw, target_samples);
+...
+% in truncate_ir():
+idx_end = idx_start + fixed_length_samples - 1;
+if idx_end <= N
+    ir_trunc = ir(idx_start:idx_end);
+else
+    padding  = zeros(idx_end - N, 1);
+    ir_trunc = [ir(idx_start:end); padding];
+end
+\end{lstlisting}
+
+\paragraph{Sammlung von \texttt{FS\_global\_peak}.}
+Über alle im ersten Durchlauf verarbeiteten IRs wird der maximale Absolutwert
+kumuliert:
+
+\begin{lstlisting}[caption={Akkumulation der Peak-Referenz (\texttt{step1\_process\_data.m})},
+                   label=lst:peak2]
+ir_max        = max(abs(ir_trunc));
+FS_global_peak = max(FS_global_peak, ir_max);
+\end{lstlisting}
+
+% ---------------------------------------------------------------------------
+\subsection{Pass~2 – Spektralanalyse und Energie-Referenzbestimmung}
+% ---------------------------------------------------------------------------
+
+\subsubsection{Terzband-Spektrum}
+
+Die Funktion \texttt{calc\_terz\_spectrum()} berechnet Terzbandpegel und
+Breitband-Summenpegel in fünf Einzelschritten.
+
+\paragraph{FFT mit Zero-Padding.}
+Die truncierte IR wird auf die nächste Zweierpotenz erweitert und
+fouriertransformiert:
+
+\begin{lstlisting}[caption={FFT mit Zero-Padding (\texttt{calc\_terz\_spectrum.m})},
+                   label=lst:fft]
+N     = length(ir);
+N_fft = 2^nextpow2(N);
+X     = fft(ir, N_fft);
+freqs = (0:N_fft-1) * (fs / N_fft);
+\end{lstlisting}
+
+\paragraph{Luftabsorptionskorrektur.}
+Die Funktion \texttt{airabsorb()} berechnet den frequenzabhängigen Absorptions\-koeffizienten
+$\alpha(f)$ nach ISO~9613-1 und liefert den linearen Korrekturfaktor $A_\mathrm{lin}(f)$.
+Der Absorptionskoeffizient ergibt sich aus der molekularen Relaxation von
+Sauerstoff und Stickstoff:
+
+\begin{equation}
+    \alpha(f) = 8{,}686\,f^2 \left[
+        1{,}84 \!\times\! 10^{-11} \!\left(\frac{p_a}{p_r}\right)^{\!-1} \!
+        \left(\frac{T}{T_0}\right)^{\!1/2}
+        + \left(\frac{T}{T_0}\right)^{\!-5/2} \!
+        \left(
+            \frac{0{,}01275\, e^{-2239{,}1/T}}{f_{rO} + f^2/f_{rO}}
+            + \frac{0{,}1068\, e^{-3352{,}0/T}}{f_{rN} + f^2/f_{rN}}
+        \right)
+    \right]
+    \label{eq:alpha}
+\end{equation}
+
+Die Dämpfung über die Distanz $s$ und der lineare Korrekturfaktor berechnen sich zu:
+
+\begin{equation}
+    A_\mathrm{dB}(f) = \frac{\alpha(f) \cdot s}{100}, \qquad
+    A_\mathrm{lin}(f) = 10^{A_\mathrm{dB}(f)/20}
+    \label{eq:alin}
+\end{equation}
+
+Die Korrektur im Frequenzbereich lautet:
+
+\begin{equation}
+    X_\mathrm{korr}(f) = X(f) \cdot A_\mathrm{lin}(f)
+    \label{eq:xcorr}
+\end{equation}
+
+\begin{lstlisting}[caption={Luftabsorptionskorrektur im Frequenzbereich
+                             (\texttt{calc\_terz\_spectrum.m}, \texttt{airabsorb.m})},
+                   label=lst:air]
+% --- airabsorb.m (Auszug): Koeffizientenberechnung ---
+alpha = 8.686 .* f.^2 .* (1.84e-11*(p_a/p_r)^(-1)*(T_kel/T_0)^(0.5) + ...
+    (T_kel/T_0)^(-2.5) .* ( ...
+        0.01275 .* exp(-2239.1./T_kel) ./ (f_rO + (f.^2./f_rO)) + ...
+        0.1068  .* exp(-3352.0./T_kel) ./ (f_rN + (f.^2./f_rN)) ...
+    ));
+A_dB = alpha * s/100;
+A_lin = 10.^(A_dB/20);
+
+% --- calc_terz_spectrum.m: Anwendung auf Spektrum ---
+[~, A_lin, ~] = airabsorb(101.325, fs, N_fft, T, LF, dist);
+X = X .* A_lin(:);
+\end{lstlisting}
+
+\paragraph{Einseitige Energiedichte.}
+Das einseitige Leistungsdichtespektrum ergibt sich zu:
+
+\begin{equation}
+    S_E(f) = \frac{|X(f)|^2}{N}
+    \label{eq:psd}
+\end{equation}
+
+\paragraph{Terzbandgrenzen nach IEC~61260.}
+Die 13~Mittenfrequenzen ($4\,\mathrm{kHz}$–$63\,\mathrm{kHz}$) folgen der Okta\-ven\-basis~10.
+Die Bandgrenzen berechnen sich zu:
+
+\begin{equation}
+    f_\mathrm{low} = f_c \cdot 10^{-1/20}, \qquad
+    f_\mathrm{high} = f_c \cdot 10^{+1/20}
+    \label{eq:terz}
+\end{equation}
+
+\begin{lstlisting}[caption={Terzbandgrenzen und Bandintegration
+                             (\texttt{calc\_terz\_spectrum.m})},
+                   label=lst:terz]
+f_mitten = [4000 5000 6300 8000 10000 12500 ...
+            16000 20000 25000 31500 40000 50000 63000];
+indices  = 6:18;
+f_exact  = 1000 * 10.^(indices/10);   % Exakte IEC-Mittenfrequenzen
+
+X_mag_sq = (abs(X).^2) / N;           % Einseitige Energiedichte
+energy_sum = 0;
+
+for k = 1:length(f_mitten)
+    fc  = f_exact(k);
+    fl  = fc * 10^(-1/20);
+    fu  = fc * 10^( 1/20);
+    idx = freqs >= fl & freqs <= fu;
+    if any(idx)
+        band_energy = sum(X_mag_sq(idx));
+        energy_sum  = energy_sum + band_energy;
+        L_dBFS(k)  = 10*log10(band_energy / (FS_global^2 + eps));
+    end
+end
+\end{lstlisting}
+
+\paragraph{Pegelberechnung.}
+Terzbandpegel und Breitband-Summenpegel in dBFS:
+
+\begin{align}
+    L_\mathrm{Terz,k} &= 10 \cdot \log_{10}\!\left(\frac{E_{\mathrm{Band},k}}{FS_\mathrm{ref}^2}\right)
+    \label{eq:lterz} \\[4pt]
+    L_\mathrm{sum} &= 10 \cdot \log_{10}\!\left(\frac{\displaystyle\sum_k E_{\mathrm{Band},k}}{FS_\mathrm{ref}^2}\right)
+    \label{eq:lsum}
+\end{align}
+
+\subsubsection{Nachhallzeit T30}
+
+Die Funktion \texttt{calc\_rt60\_spectrum()} berechnet die frequenzabhängige
+Nachhallzeit für jedes Terzband.
+
+\paragraph{Butterworth-Bandpassfilterung.}
+Ein Butterworth-Bandpassfilter 4.\,Ordnung wird mit den Terzband-Grenzfrequenzen
+entworfen und nullphasig (\texttt{filtfilt}) auf die IR angewendet:
+
+\begin{lstlisting}[caption={Nullphasige Bandpassfilterung (\texttt{calc\_rt60\_spectrum.m})},
+                   label=lst:bp]
+fc = f_exact(k);
+fl = fc * 10^(-1/20);
+fu = fc * 10^( 1/20);
+[b, a]  = butter(4, [fl fu]/(fs/2), 'bandpass');
+filt_ir = filtfilt(b, a, ir);
+\end{lstlisting}
+
+\paragraph{Schroeder-Integration.}
+Die Energieverfall-Kurve (EDC) entsteht durch Rückwärtsintegration:
+
+\begin{equation}
+    \mathrm{EDC}(t) = \sum_{\tau=t}^{\infty} h^2(\tau)
+    \label{eq:edc}
+\end{equation}
+
+\paragraph{Lineare Regression und Extrapolation.}
+Im Bereich $-5$\,dB bis $-35$\,dB der normalisierten EDC wird eine lineare
+Regression (Methode der kleinsten Quadrate) durchgeführt. Die Regressions\-steigung
+$\hat{s}$ wird auf $-60$\,dB extrapoliert:
+
+\begin{lstlisting}[caption={Regression und T30-Extrapolation
+                             (\texttt{calc\_rt60\_spectrum.m})},
+                   label=lst:t30]
+edc_db     = calc_edc(filt_ir);        % normierte EDC in dB
+idx_start  = find(edc_db <= -5,  1, 'first');
+idx_end_r  = find(edc_db(idx_start:end) <= -35, 1, 'first');
+idx_end    = idx_start + idx_end_r - 1;
+
+y_segment  = edc_db(idx_start:idx_end);
+x_segment  = (0:length(y_segment)-1)' / fs;
+p          = polyfit(x_segment, y_segment, 1);
+slope      = p(1);                     % Abklingrate [dB/s]
+
+if slope < 0
+    T_meas = -60 / slope;              % Extrapolation auf -60 dB
+end
+\end{lstlisting}
+
+\paragraph{Luftabsorptionskorrektur der Nachhallzeit.}
+Der frequenzabhängige Einfluss der Luftabsorption wird subtraktiv kompensiert:
+
+\begin{equation}
+    \frac{1}{T_\mathrm{Raum}} = \frac{1}{T_\mathrm{gemessen}} - \frac{1}{T_\mathrm{Luft}}
+    \label{eq:t30corr}
+\end{equation}
+
+Dabei ergibt sich $T_\mathrm{Luft}$ aus der Schallgeschwindigkeit $c$ und dem
+Absorptionskoeffizienten $m_\mathrm{Luft}$ [dB/m]:
+
+\begin{lstlisting}[caption={Luftabsorptionskorrektur der Nachhallzeit
+                             (\texttt{calc\_rt60\_spectrum.m})},
+                   label=lst:t30air]
+m_air  = alpha_val / 100;             % Daempfung in dB/m
+c      = 343;
+T_air  = 60.0 / (c * m_air);
+if T_meas < T_air
+    t60_vals(k) = (T_meas * T_air) / (T_air - T_meas);
+else
+    t60_vals(k) = T_meas;
+end
+\end{lstlisting}
+
+\subsubsection{Globale Energiereferenz}
+
+Aus allen verarbeiteten IRs wird die maximale Breitband-Energie bestimmt:
+
+\begin{equation}
+    FS_\mathrm{global\_energy} = \sqrt{\max_{\,\text{IRs}}\sum_k E_{\mathrm{Band},k}}
+    \label{eq:fsenergy}
+\end{equation}
+
+Die finale Vollaussteuerungsreferenz ergibt sich als Maximum beider Durchläufe:
+
+\begin{equation}
+    FS_\mathrm{global\_final} = \max\!\left(FS_\mathrm{global\_peak},\; FS_\mathrm{global\_energy}\right)
+    \label{eq:fsfinal}
+\end{equation}
+
+\begin{lstlisting}[caption={Bestimmung der globalen Referenz
+                             (\texttt{step1\_process\_data.m})},
+                   label=lst:fsref]
+% Pass 2: Spektren mit FS_global=1 -> lineare Energien
+[L_terz_tmp, L_sum_tmp, ~] = calc_terz_spectrum(ir_trunc, fs, 1.0, ...
+                                                  dist, T, LF);
+energy_sum    = 10^(L_sum_tmp / 10);
+max_energy_sum = max(max_energy_sum, energy_sum);
+...
+FS_global_energy = sqrt(max_energy_sum);
+FS_global_final  = max(FS_global_peak, FS_global_energy);
+\end{lstlisting}
+
+Diese doppelte Referenzbildung stellt sicher, dass weder der maximale
+Zeitbereichs-Peak noch die maximale spektrale Gesamtenergie den Wert 0\,dBFS
+übersteigt.
+
+% ---------------------------------------------------------------------------
+\subsection{Pass~3 – Finale Pegelberechnung}
+% ---------------------------------------------------------------------------
+
+Im dritten Durchlauf werden sämtliche Terzbandpegel mit $FS_\mathrm{global\_final}$
+neu berechnet:
+
+\begin{equation}
+    L = 10 \cdot \log_{10}\!\left(\frac{E}{FS_\mathrm{global\_final}^2}\right)
+    \label{eq:lfinal}
+\end{equation}
+
+Pegel oberhalb 0\,dBFS werden auf 0\,dBFS gedeckelt:
+
+\begin{lstlisting}[caption={Finale dBFS-Berechnung mit Deckelung
+                             (\texttt{step1\_process\_data.m})},
+                   label=lst:pass3]
+L_terz = 10 * log10((E_terz + eps) / (FS_global_final^2));
+L_sum  = 10 * log10((E_sum  + eps) / (FS_global_final^2));
+L_terz = min(L_terz, 0);             % Deckelung bei 0 dBFS
+L_sum  = min(L_sum,  0);
+\end{lstlisting}
+
+Die Ergebnisse werden in einem strukturierten \texttt{Result}-Struct zusammengefasst
+und als \texttt{.mat}-Datei gespeichert:
+
+\begin{lstlisting}[caption={Aufbau des Result-Structs und Speicherung
+                             (\texttt{step1\_process\_data.m})},
+                   label=lst:result]
+Result.meta.fs            = fs;
+Result.meta.FS_global_used = FS_global_final;
+Result.meta.T             = proc.T;
+Result.meta.LF            = proc.LF;
+
+Result.time.ir            = proc.ir_trunc;
+Result.time.metrics       = proc.metrics;    % SNR, Energie, Indizes
+
+Result.freq.f_center      = proc.f_center;
+Result.freq.terz_dbfs     = L_terz;
+Result.freq.sum_level     = L_sum;
+Result.freq.t30           = proc.t30_vals;
+
+saveName = sprintf('Proc_%s_Pos%s.mat', meta.variante, meta.position);
+save(fullfile(procDir, saveName), 'Result');
+\end{lstlisting}
+
+% ---------------------------------------------------------------------------
+\subsection{Zusammenfassung und Mittelwertbildung}
+% ---------------------------------------------------------------------------
+
+Aus allen Einzelmessungen wird eine Summary-Tabelle erstellt (Felder:
+Variante, Position, Summenpegel, SNR) und in zwei Formaten persistiert:
+
+\begin{lstlisting}[caption={Erstellung der Summary-Tabelle
+                             (\texttt{step1\_process\_data.m})},
+                   label=lst:summary]
+summary_table = cell2table(summary_data, ...
+    'VariableNames', {'Variante','Position','SumLevel','SNR','File'});
+save(fullfile(procDir, 'Summary_Database.mat'), 'summary_table');
+writetable(summary_table, fullfile(procDir, 'Summary.xlsx'));
+\end{lstlisting}
+
+\subsubsection{Positions-Mittelwertbildung}
+
+Pro Variante wird ein positionsgemitteltes Ergebnis berechnet.
+Der Mittelungsprozess beschränkt sich auf gültige Empfängerpositionen
+(numerische Indizes 1–15); Quellpositionen sowie geometrische Zwischenpunkte
+werden ausgeschlossen:
+
+\begin{lstlisting}[caption={Filterung auf gueltige Empfaengerpositionen
+                             (\texttt{step1\_process\_data.m})},
+                   label=lst:filter]
+for j = 1:height(summary_table)
+    pos    = summary_table.Position{j};
+    posNum = str2double(pos);
+    if ~isnan(posNum) && posNum >= 1 && posNum <= 15
+        mask_valid(j) = true;
+    end
+end
+\end{lstlisting}
+
+Die Mittelung erfolgt im linearen Energiebereich; die Rückrechnung
+in die logarithmische Darstellung lautet:
+
+\begin{equation}
+    L_\mathrm{avg} = 10 \cdot \log_{10}\!\left(\frac{\bar{E}}{FS_\mathrm{global\_final}^2}\right),
+    \qquad \bar{E} = \frac{1}{N}\sum_{n=1}^{N} E_n
+    \label{eq:lavg}
+\end{equation}
+
+\begin{lstlisting}[caption={Energetische Mittelwertbildung und Rueckrechnung
+                             (\texttt{step1\_process\_data.m})},
+                   label=lst:avg]
+sum_E_terz  = 0;
+sum_E_total = 0;
+
+for k = 1:n
+    D = load(fullfile(procDir, subset.File{k}));
+    E_terz = 10.^(D.Result.freq.terz_dbfs / 10);
+    E_terz(~isfinite(E_terz)) = 0;
+    sum_E_terz  = sum_E_terz  + E_terz;
+    E_tot       = 10^(D.Result.freq.sum_level / 10);
+    if ~isfinite(E_tot), E_tot = 0; end
+    sum_E_total = sum_E_total + E_tot;
+end
+
+Result.freq.terz_dbfs = 10 * log10((sum_E_terz/n) + eps);
+Result.freq.sum_level = 10 * log10((sum_E_total/n) + eps);
+
+saveName = sprintf('Proc_%s_Average.mat', variante);
+save(fullfile(procDir, saveName), 'Result');
+\end{lstlisting}
+
+Dieses Verfahren gewährleistet eine physikalisch korrekte Energieaddition,
+da die logarithmische Mittelung zu systematischen Unterschätzungen führen würde.
+Die gemittelten Ergebnisse werden unter
+\texttt{processed/Proc\_[Variante]\_Average.mat} abgelegt und besitzen dieselbe
+Struct-Struktur wie die Einzelpositions-Ergebnisse.
+
+\end{document}

@@ -1,0 +1,111 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\babel@aux[2]{}
+\@nameuse{bbl@beforestart}
+\providecommand\HyperFirstAtBeginDocument{\AtBeginDocument}
+\HyperFirstAtBeginDocument{\ifx\hyper@anchor\@undefined
+\global\let\oldcontentsline\contentsline
+\gdef\contentsline#1#2#3#4{\oldcontentsline{#1}{#2}{#3}}
+\global\let\oldnewlabel\newlabel
+\gdef\newlabel#1#2{\newlabelxx{#1}#2}
+\gdef\newlabelxx#1#2#3#4#5#6{\oldnewlabel{#1}{{#2}{#3}}}
+\AtEndDocument{\ifx\hyper@anchor\@undefined
+\let\contentsline\oldcontentsline
+\let\newlabel\oldnewlabel
+\fi}
+\fi}
+\global\let\hyper@last\relax 
+\gdef\HyperFirstAtBeginDocument#1{#1}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\babel@aux{nil}{}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Verarbeitungspipeline für Impulsantworten}{1}{section.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Konfigurationsparameter der Verarbeitungspipeline\relax }}{1}{table.caption.2}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:params}{{1}{1}{Konfigurationsparameter der Verarbeitungspipeline\relax }{table.caption.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.1}Initialisierung und Datenladen}{1}{subsection.1.1}\protected@file@percent }
+\newlabel{lst:init}{{1}{1}{Pfadinitialisierung via \texttt {init\_repo\_paths.m}}{lstlisting.1}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {1}Pfadinitialisierung via \texttt  {init\_repo\_paths.m}}{1}{lstlisting.1}\protected@file@percent }
+\newlabel{lst:geo}{{2}{1}{Geometriedefinition und Abstandsberechnung (\texttt {get\_geometry.m})}{lstlisting.2}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {2}Geometriedefinition und Abstandsberechnung (\texttt  {get\_geometry.m})}{1}{lstlisting.2}\protected@file@percent }
+\newlabel{lst:scan}{{3}{2}{Datei-Scan des Rohdatenverzeichnisses (\texttt {step1\_process\_data.m})}{lstlisting.3}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {3}Datei-Scan des Rohdatenverzeichnisses (\texttt  {step1\_process\_data.m})}{2}{lstlisting.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2}Pass~1 – IR-Extraktion und Vorverarbeitung}{2}{subsection.1.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.2.1}Metadaten-Parsing}{2}{subsubsection.1.2.1}\protected@file@percent }
+\newlabel{lst:meta}{{4}{2}{Regex-basiertes Metadaten-Parsing (\texttt {load\_and\_parse\_file.m})}{lstlisting.4}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {4}Regex-basiertes Metadaten-Parsing (\texttt  {load\_and\_parse\_file.m})}{2}{lstlisting.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.2.2}IR-Extraktion}{2}{subsubsection.1.2.2}\protected@file@percent }
+\newlabel{lst:extract}{{5}{2}{Feldsuche und Typ-Konvertierung (\texttt {extract\_ir.m})}{lstlisting.5}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {5}Feldsuche und Typ-Konvertierung (\texttt  {extract\_ir.m})}{2}{lstlisting.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.2.3}DC-Offset-Entfernung}{3}{subsubsection.1.2.3}\protected@file@percent }
+\newlabel{eq:dc}{{1}{3}{DC-Offset-Entfernung}{equation.1.1}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.2.4}Truncation}{3}{subsubsection.1.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Peak-Detektion.}{3}{section*.3}\protected@file@percent }
+\newlabel{lst:peak}{{6}{3}{Peak-Detektion (\texttt {truncate\_ir.m})}{lstlisting.6}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {6}Peak-Detektion (\texttt  {truncate\_ir.m})}{3}{lstlisting.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Onset-Detektion.}{3}{section*.4}\protected@file@percent }
+\newlabel{lst:onset}{{7}{3}{Onset-Rückwärtssuche mit Pre-Roll (\texttt {truncate\_ir.m})}{lstlisting.7}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {7}Onset-Rückwärtssuche mit Pre-Roll (\texttt  {truncate\_ir.m})}{3}{lstlisting.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Rauschpegel-Schätzung.}{3}{section*.5}\protected@file@percent }
+\newlabel{lst:noise}{{8}{3}{Rauschpegel-Schätzung (\texttt {truncate\_ir.m})}{lstlisting.8}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {8}Rauschpegel-Schätzung (\texttt  {truncate\_ir.m})}{3}{lstlisting.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Feste Länge mit Zero-Padding.}{4}{section*.6}\protected@file@percent }
+\newlabel{lst:trunc}{{9}{4}{Beschneidung auf Festlänge mit Padding (\texttt {truncate\_ir.m})}{lstlisting.9}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {9}Beschneidung auf Festlänge mit Padding (\texttt  {truncate\_ir.m})}{4}{lstlisting.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Sammlung von \texttt  {FS\_global\_peak}.}{4}{section*.7}\protected@file@percent }
+\newlabel{lst:peak2}{{10}{4}{Akkumulation der Peak-Referenz (\texttt {step1\_process\_data.m})}{lstlisting.10}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {10}Akkumulation der Peak-Referenz (\texttt  {step1\_process\_data.m})}{4}{lstlisting.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.3}Pass~2 – Spektralanalyse und Energie-Referenzbestimmung}{4}{subsection.1.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.3.1}Terzband-Spektrum}{4}{subsubsection.1.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{FFT mit Zero-Padding.}{4}{section*.8}\protected@file@percent }
+\newlabel{lst:fft}{{11}{4}{FFT mit Zero-Padding (\texttt {calc\_terz\_spectrum.m})}{lstlisting.11}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {11}FFT mit Zero-Padding (\texttt  {calc\_terz\_spectrum.m})}{4}{lstlisting.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Luftabsorptionskorrektur.}{4}{section*.9}\protected@file@percent }
+\newlabel{eq:alpha}{{2}{5}{Luftabsorptionskorrektur}{equation.1.2}{}}
+\newlabel{eq:alin}{{3}{5}{Luftabsorptionskorrektur}{equation.1.3}{}}
+\newlabel{eq:xcorr}{{4}{5}{Luftabsorptionskorrektur}{equation.1.4}{}}
+\newlabel{lst:air}{{12}{5}{Luftabsorptionskorrektur im Frequenzbereich (\texttt {calc\_terz\_spectrum.m}, \texttt {airabsorb.m})}{lstlisting.12}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {12}Luftabsorptionskorrektur im Frequenzbereich (\texttt  {calc\_terz\_spectrum.m}, \texttt  {airabsorb.m})}{5}{lstlisting.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Einseitige Energiedichte.}{5}{section*.10}\protected@file@percent }
+\newlabel{eq:psd}{{5}{5}{Einseitige Energiedichte}{equation.1.5}{}}
+\@writefile{toc}{\contentsline {paragraph}{Terzbandgrenzen nach IEC~61260.}{5}{section*.11}\protected@file@percent }
+\newlabel{eq:terz}{{6}{5}{Terzbandgrenzen nach IEC~61260}{equation.1.6}{}}
+\newlabel{lst:terz}{{13}{5}{Terzbandgrenzen und Bandintegration (\texttt {calc\_terz\_spectrum.m})}{lstlisting.13}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {13}Terzbandgrenzen und Bandintegration (\texttt  {calc\_terz\_spectrum.m})}{5}{lstlisting.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Pegelberechnung.}{6}{section*.12}\protected@file@percent }
+\newlabel{eq:lterz}{{7}{6}{Pegelberechnung}{equation.1.7}{}}
+\newlabel{eq:lsum}{{8}{6}{Pegelberechnung}{equation.1.8}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.3.2}Nachhallzeit T30}{6}{subsubsection.1.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Butterworth-Bandpassfilterung.}{6}{section*.13}\protected@file@percent }
+\newlabel{lst:bp}{{14}{6}{Nullphasige Bandpassfilterung (\texttt {calc\_rt60\_spectrum.m})}{lstlisting.14}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {14}Nullphasige Bandpassfilterung (\texttt  {calc\_rt60\_spectrum.m})}{6}{lstlisting.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Schroeder-Integration.}{6}{section*.14}\protected@file@percent }
+\newlabel{eq:edc}{{9}{6}{Schroeder-Integration}{equation.1.9}{}}
+\@writefile{toc}{\contentsline {paragraph}{Lineare Regression und Extrapolation.}{6}{section*.15}\protected@file@percent }
+\newlabel{lst:t30}{{15}{6}{Regression und T30-Extrapolation (\texttt {calc\_rt60\_spectrum.m})}{lstlisting.15}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {15}Regression und T30-Extrapolation (\texttt  {calc\_rt60\_spectrum.m})}{6}{lstlisting.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Luftabsorptionskorrektur der Nachhallzeit.}{7}{section*.16}\protected@file@percent }
+\newlabel{eq:t30corr}{{10}{7}{Luftabsorptionskorrektur der Nachhallzeit}{equation.1.10}{}}
+\newlabel{lst:t30air}{{16}{7}{Luftabsorptionskorrektur der Nachhallzeit (\texttt {calc\_rt60\_spectrum.m})}{lstlisting.16}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {16}Luftabsorptionskorrektur der Nachhallzeit (\texttt  {calc\_rt60\_spectrum.m})}{7}{lstlisting.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.3.3}Globale Energiereferenz}{7}{subsubsection.1.3.3}\protected@file@percent }
+\newlabel{eq:fsenergy}{{11}{7}{Globale Energiereferenz}{equation.1.11}{}}
+\newlabel{eq:fsfinal}{{12}{7}{Globale Energiereferenz}{equation.1.12}{}}
+\newlabel{lst:fsref}{{17}{7}{Bestimmung der globalen Referenz (\texttt {step1\_process\_data.m})}{lstlisting.17}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {17}Bestimmung der globalen Referenz (\texttt  {step1\_process\_data.m})}{7}{lstlisting.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.4}Pass~3 – Finale Pegelberechnung}{8}{subsection.1.4}\protected@file@percent }
+\newlabel{eq:lfinal}{{13}{8}{Pass~3 – Finale Pegelberechnung}{equation.1.13}{}}
+\newlabel{lst:pass3}{{18}{8}{Finale dBFS-Berechnung mit Deckelung (\texttt {step1\_process\_data.m})}{lstlisting.18}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {18}Finale dBFS-Berechnung mit Deckelung (\texttt  {step1\_process\_data.m})}{8}{lstlisting.18}\protected@file@percent }
+\newlabel{lst:result}{{19}{8}{Aufbau des Result-Structs und Speicherung (\texttt {step1\_process\_data.m})}{lstlisting.19}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {19}Aufbau des Result-Structs und Speicherung (\texttt  {step1\_process\_data.m})}{8}{lstlisting.19}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.5}Zusammenfassung und Mittelwertbildung}{8}{subsection.1.5}\protected@file@percent }
+\newlabel{lst:summary}{{20}{8}{Erstellung der Summary-Tabelle (\texttt {step1\_process\_data.m})}{lstlisting.20}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {20}Erstellung der Summary-Tabelle (\texttt  {step1\_process\_data.m})}{8}{lstlisting.20}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.5.1}Positions-Mittelwertbildung}{9}{subsubsection.1.5.1}\protected@file@percent }
+\newlabel{lst:filter}{{21}{9}{Filterung auf gueltige Empfaengerpositionen (\texttt {step1\_process\_data.m})}{lstlisting.21}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {21}Filterung auf gueltige Empfaengerpositionen (\texttt  {step1\_process\_data.m})}{9}{lstlisting.21}\protected@file@percent }
+\newlabel{eq:lavg}{{14}{9}{Positions-Mittelwertbildung}{equation.1.14}{}}
+\newlabel{lst:avg}{{22}{9}{Energetische Mittelwertbildung und Rueckrechnung (\texttt {step1\_process\_data.m})}{lstlisting.22}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {22}Energetische Mittelwertbildung und Rueckrechnung (\texttt  {step1\_process\_data.m})}{9}{lstlisting.22}\protected@file@percent }
+\gdef \@abspage@last{9}
